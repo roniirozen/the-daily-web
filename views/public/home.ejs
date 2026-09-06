@@ -119,14 +119,24 @@
 
         <aside class="sidebar">
 
-          <section class="sidebar-card">
+          <section id="weather-widget" class="sidebar-card" aria-live="polite">
             <p class="sidebar-label">WEATHER</p>
 
             <h3>Weather</h3>
 
-            <p>
-              Live weather information will appear here.
-            </p>
+            <div id="weather-loading" class="weather-state">
+              Loading weather...
+            </div>
+
+            <div id="weather-error" class="weather-state" hidden>
+              Weather is temporarily unavailable.
+            </div>
+
+            <div id="weather-content" class="weather-content" hidden>
+              <p class="weather-location"></p>
+              <p class="weather-temperature"></p>
+              <p class="weather-condition"></p>
+            </div>
           </section>
 
         </aside>
@@ -144,6 +154,7 @@
   </footer>
 
   <script src="/js/feed.js" defer></script>
+  <script src="/js/weather.js" defer></script>
 
 </body>
 </html>
