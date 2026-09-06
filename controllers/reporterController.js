@@ -13,13 +13,34 @@ exports.getDashboard = async (req, res, next) => {
       return res.status(401).send('Authentication required');
     }
 
-    const articles = await Article.find({
-      reporter: reporterId
-    }).sort({ updatedAt: -1 });
+    const pageSize = 20;
+    const requestedPage = req.query.page === undefined ? 1 : Number(req.query.page);
+    if (
+      (req.query.page !== undefined &&
+        (typeof req.query.page !== 'string' || !/^[1-9]\d*$/.test(req.query.page))) ||
+      !Number.isSafeInteger(requestedPage) || requestedPage < 1
+    ) {
+      return res.status(400).send('Invalid page number');
+    }
+
+    const filter = { reporter: reporterId };
+    const total = await Article.countDocuments(filter);
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const page = Math.min(requestedPage, totalPages);
+    const articles = await Article.find(filter)
+      // The title is enough to indicate an approved snapshot exists.
+      .select('workingVersion.title status updatedAt editorNote publishedVersion.title')
+      .sort({ updatedAt: -1, _id: -1 })
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
+      .lean();
 
     res.render('reporter/dashboard', {
       pageTitle: 'Reporter Dashboard',
-      articles
+      articles,
+      page,
+      totalPages,
+      total
     });
   } catch (error) {
     next(error);

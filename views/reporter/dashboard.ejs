@@ -29,6 +29,7 @@
         <h2>Your next story starts here</h2><p>Create an article. Your draft saves as you write.</p>
       </section>
     <% } %>
+    <p class="story-date"><%= total %> article<%= total === 1 ? '' : 's' %></p>
     <div class="story-list">
       <% articles.forEach(article => { %>
         <article class="workspace-card story-row">
@@ -47,6 +48,17 @@
         </article>
       <% }) %>
     </div>
+    <% if (totalPages > 1) { %>
+      <nav class="pagination" aria-label="Article pages">
+        <% if (page > 1) { %>
+          <a class="secondary-button" href="/reporter?page=<%= page - 1 %>">Previous</a>
+        <% } %>
+        <span>Page <%= page %> of <%= totalPages %></span>
+        <% if (page < totalPages) { %>
+          <a class="secondary-button" href="/reporter?page=<%= page + 1 %>">Next</a>
+        <% } %>
+      </nav>
+    <% } %>
   </main>
 </body>
 </html>
