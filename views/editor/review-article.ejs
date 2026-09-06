@@ -17,6 +17,7 @@
       <h1><%= working.title || 'Untitled article' %></h1>
       <p>By <strong><%= article.reporter?.username || 'Reporter unavailable' %></strong> &middot; <span class="badge <%= article.status %>"><%= article.status %></span></p>
       <p class="muted">Last updated <time datetime="<%= revision %>"><%= article.updatedAt.toLocaleString('en-GB') %></time></p>
+      <p><a href="/editor/analytics/<%= article._id %>">View analytics &rarr;</a></p>
     </div>
     <div class="notice"><strong><%= live ? 'A published version is live.' : 'Initial publication — not public yet.' %></strong> <%= live ? 'Readers see only CURRENTLY PUBLIC below. Approving a new version replaces that public snapshot.' : 'First approval will make this story available to readers.' %></div>
     <% if (article.editorNote) { %><aside class="panel"><h2>Editor note</h2><p class="article-text"><%= article.editorNote %></p></aside><% } %>

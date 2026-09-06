@@ -60,54 +60,83 @@
             </div>
           </div>
 
-          <div id="articles-container" class="articles-grid">
+          <form id="feed-controls" class="feed-controls" role="search">
 
-            <article class="article-card">
+            <div class="feed-control feed-control-search">
+              <label for="feed-search">Search</label>
+              <input
+                id="feed-search"
+                type="search"
+                name="q"
+                placeholder="Search headlines..."
+                autocomplete="off"
+              >
+            </div>
 
-              <div class="article-image placeholder-image">
-                Article image
-              </div>
+            <div class="feed-control">
+              <label for="feed-category">Category</label>
+              <select id="feed-category" name="category">
+                <option value="">All categories</option>
+              </select>
+            </div>
 
-              <div class="article-content">
+            <div class="feed-control">
+              <label for="feed-viewed">Viewed</label>
+              <select id="feed-viewed" name="viewed">
+                <option value="all">All articles</option>
+                <option value="unviewed">Not viewed yet</option>
+                <option value="viewed">Already viewed</option>
+              </select>
+            </div>
 
-                <div class="article-meta">
-                  <span>Technology</span>
-                  <span>September 6, 2026</span>
-                </div>
+            <div class="feed-control">
+              <label for="feed-sort">Sort by</label>
+              <select id="feed-sort" name="sort">
+                <option value="date">Publication date</option>
+                <option value="popularity">Popularity</option>
+              </select>
+            </div>
 
-                <h3>
-                  <a href="#">
-                    Example headline for The Daily Web
-                  </a>
-                </h3>
+          </form>
 
-                <p>
-                  Article summaries will appear here once the news feed
-                  is connected to the database.
-                </p>
+          <div id="articles-container" class="articles-grid" aria-live="polite"></div>
 
-                <div class="article-author">
-                  By Example Reporter
-                </div>
+          <p id="feed-empty" class="empty-message" hidden>
+            No articles match your search right now.
+          </p>
 
-              </div>
+          <p id="feed-error" class="empty-message feed-error" hidden>
+            Unable to load the news feed. Please try again in a moment.
+          </p>
 
-            </article>
-
+          <div id="feed-loading" class="feed-loading" hidden>
+            Loading more stories...
           </div>
+
+          <div id="feed-sentinel" aria-hidden="true"></div>
 
         </div>
 
         <aside class="sidebar">
 
-          <section class="sidebar-card">
+          <section id="weather-widget" class="sidebar-card" aria-live="polite">
             <p class="sidebar-label">WEATHER</p>
 
             <h3>Weather</h3>
 
-            <p>
-              Live weather information will appear here.
-            </p>
+            <div id="weather-loading" class="weather-state">
+              Loading weather...
+            </div>
+
+            <div id="weather-error" class="weather-state" hidden>
+              Weather is temporarily unavailable.
+            </div>
+
+            <div id="weather-content" class="weather-content" hidden>
+              <p class="weather-location"></p>
+              <p class="weather-temperature"></p>
+              <p class="weather-condition"></p>
+            </div>
           </section>
 
         </aside>
@@ -123,6 +152,9 @@
       <p>&copy; 2026 The Daily Web</p>
     </div>
   </footer>
+
+  <script src="/js/feed.js" defer></script>
+  <script src="/js/weather.js" defer></script>
 
 </body>
 </html>

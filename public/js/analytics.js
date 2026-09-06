@@ -83,6 +83,23 @@
     ctx.lineTo(plotRight, plotBottom);
     ctx.stroke();
 
+    // Axis titles, so the chart is legible without relying only on the legend.
+    ctx.save();
+    ctx.fillStyle = COLORS.text;
+    ctx.font = 'bold 12px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.translate(14, (plotTop + plotBottom) / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('Views per hour', 0, 0);
+    ctx.restore();
+
+    ctx.fillStyle = COLORS.text;
+    ctx.font = 'bold 12px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('Time', (plotLeft + plotRight) / 2, height - 16);
+
     // X-axis labels: first, middle, last bucket
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
