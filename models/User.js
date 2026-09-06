@@ -6,10 +6,16 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      trim: true
+      trim: true,
+      lowercase: true
     },
 
-    password: {
+    passwordHash: {
+      type: String,
+      required: true
+    },
+
+    passwordSalt: {
       type: String,
       required: true
     },
