@@ -6,6 +6,43 @@ if (commentForm) {
   const contentInput = document.getElementById('content');
   const messageElement = document.getElementById('comment-message');
   const submitButton = commentForm.querySelector('button[type="submit"]');
+  const commentsList = document.getElementById('comments-list');
+  const moreButton = document.getElementById('more-comments');
+
+  function commentElement(comment) {
+    const element = document.createElement('article');
+    element.className = 'comment';
+    element.dataset.commentId = comment._id;
+    const header = document.createElement('div');
+    header.className = 'comment-header';
+    const author = document.createElement('strong');
+    author.textContent = comment.authorName;
+    const time = document.createElement('time');
+    time.dateTime = new Date(comment.createdAt).toISOString();
+    time.textContent = new Date(comment.createdAt).toLocaleString('en-GB');
+    header.append(author, time);
+    const content = document.createElement('p');
+    content.className = 'comment-content';
+    content.textContent = comment.content;
+    element.append(header, content);
+    return element;
+  }
+
+  moreButton.addEventListener('click', async () => {
+    moreButton.disabled = true;
+    try {
+      const response = await fetch(`/api/articles/${commentForm.dataset.articleId}/comments?cursor=${encodeURIComponent(moreButton.dataset.cursor)}`);
+      if (!response.ok) throw new Error('Unable to load older comments. Please retry.');
+      const page = await response.json();
+      const existing = new Set(Array.from(commentsList.children, element => element.dataset.commentId));
+      for (const comment of page.comments) {
+        if (!existing.has(comment._id)) commentsList.appendChild(commentElement(comment));
+      }
+      moreButton.dataset.cursor = page.nextCursor || '';
+      moreButton.hidden = !page.hasMore;
+    } catch (error) { showMessage(error.message, 'error'); }
+    finally { moreButton.disabled = false; }
+  });
 
   function showMessage(message, state) {
     messageElement.textContent = message;
@@ -61,9 +98,6 @@ if (commentForm) {
         return;
       }
 
-      const commentsList =
-        document.getElementById('comments-list');
-
       const noCommentsMessage =
         document.getElementById('no-comments-message');
 
@@ -71,41 +105,7 @@ if (commentForm) {
         noCommentsMessage.remove();
       }
 
-      const commentElement = document.createElement('article');
-
-      commentElement.className = 'comment';
-      commentElement.dataset.commentId = result.comment._id;
-
-      const commentHeader = document.createElement('div');
-
-      commentHeader.className = 'comment-header';
-
-      const authorElement = document.createElement('strong');
-
-      authorElement.textContent = result.comment.authorName;
-
-      const timeElement = document.createElement('time');
-      const createdAt = new Date(result.comment.createdAt);
-
-      timeElement.dateTime = createdAt.toISOString();
-      timeElement.textContent = createdAt.toLocaleString('en-GB');
-
-      commentHeader.append(
-        authorElement,
-        timeElement
-      );
-
-      const contentElement = document.createElement('p');
-
-      contentElement.className = 'comment-content';
-      contentElement.textContent = result.comment.content;
-
-      commentElement.append(
-        commentHeader,
-        contentElement
-      );
-
-      commentsList.prepend(commentElement);
+      commentsList.prepend(commentElement(result.comment));
 
       commentForm.reset();
       showMessage('Comment posted successfully.', 'success');

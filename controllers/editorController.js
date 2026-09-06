@@ -1,5 +1,8 @@
 const mongoose = require('mongoose');
 const Article = require('../models/Article');
+const Comment = require('../models/Comment');
+const ViewStat = require('../models/ViewStat');
+const logger = require('../utils/logger');
 const { validateArticleInput } = require('../utils/articleValidation');
 
 const statuses = ['draft', 'pending', 'published', 'returned'];
@@ -50,10 +53,23 @@ exports.getDashboard = async (req, res, next) => {
     if (typeof status !== 'string' || (status && !statuses.includes(status))) {
       return res.status(400).send('Invalid article status filter.');
     }
-    const articles = await Article.find(status ? { status } : {})
-      .populate('reporter', 'username').sort({ updatedAt: -1 });
+    const pageValue = req.query.page ?? '1';
+    const search = req.query.search ?? '';
+    if (typeof pageValue !== 'string' || !/^[1-9]\d*$/.test(pageValue) || !Number.isSafeInteger(Number(pageValue)) ||
+        typeof search !== 'string' || search.length > 200) {
+      return res.status(400).send('Invalid article search or page.');
+    }
+    const filter = status ? { status } : {};
+    if (search.trim()) filter['workingVersion.title'] = { $regex: search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
+    const total = await Article.countDocuments(filter);
+    const totalPages = Math.max(1, Math.ceil(total / 20));
+    const page = Math.min(Number(pageValue), totalPages);
+    const articles = await Article.find(filter)
+      .select('workingVersion.title workingVersion.category publishedVersion.title reporter status updatedAt')
+      .populate('reporter', 'username').sort({ updatedAt: -1, _id: -1 })
+      .skip((page - 1) * 20).limit(20).lean();
     return res.render('editor/dashboard', {
-      pageTitle: 'Editor Dashboard', articles, statuses, selectedStatus: status
+      pageTitle: 'Editor Dashboard', articles, statuses, selectedStatus: status, total, page, totalPages, search
     });
   } catch (error) { return handleError(error, res, next); }
 };
@@ -75,6 +91,7 @@ exports.editArticle = async (req, res, next) => {
     if (message) return res.status(400).send(message);
     article.workingVersion = version;
     await article.save();
+    logger.info('Editor saved submitted article', { userId: req.currentUser._id.toString(), route: '/editor/articles/:id/edit' });
     return res.redirect(303, `/editor/articles/${article._id}`);
   } catch (error) { return handleError(error, res, next); }
 };
@@ -97,6 +114,7 @@ exports.approveArticle = async (req, res, next) => {
     article.publishedAt = approvedAt;
     article.publicationHistory.push({ approvedAt, editor: req.currentUser._id, type });
     await article.save();
+    logger.info('Editor approved publication', { userId: req.currentUser._id.toString(), route: '/editor/articles/:id/approve' });
     return res.redirect(303, `/editor/articles/${article._id}`);
   } catch (error) { return handleError(error, res, next); }
 };
@@ -106,12 +124,13 @@ exports.returnArticle = async (req, res, next) => {
     const article = await findArticle(req, res);
     if (!article || !prepareReviewSave(article, req, res)) return;
     const note = req.body?.editorNote;
-    if (typeof note !== 'string' || !note.trim()) {
-      return res.status(400).send('An editor note is required when returning an article.');
+    if (typeof note !== 'string' || !note.trim() || note.length > 2000) {
+      return res.status(400).send('An editor note of at most 2000 characters is required.');
     }
     article.editorNote = note.trim();
     article.status = 'returned';
     await article.save();
+    logger.info('Editor returned article', { userId: req.currentUser._id.toString(), route: '/editor/articles/:id/return' });
     return res.redirect(303, `/editor/articles/${article._id}`);
   } catch (error) { return handleError(error, res, next); }
 };
@@ -123,6 +142,8 @@ exports.deleteArticle = async (req, res, next) => {
     }
     const article = await Article.findByIdAndDelete(req.params.id);
     if (!article) return res.status(404).send('Article not found.');
+    await Promise.all([Comment.deleteMany({ article: article._id }), ViewStat.deleteMany({ article: article._id })]);
+    logger.info('Editor deleted article', { userId: req.currentUser._id.toString(), route: '/editor/articles/:id/delete' });
     return res.redirect(303, '/editor');
   } catch (error) { return handleError(error, res, next); }
 };

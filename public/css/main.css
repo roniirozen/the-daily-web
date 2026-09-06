@@ -399,6 +399,11 @@ a {
   line-height: 1.05;
 }
 
+.article-detail-header, .article-content, .article-byline, .comment-header {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
 .article-summary {
   max-width: 760px;
   margin: 24px 0;

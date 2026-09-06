@@ -2,6 +2,9 @@ const crypto = require('crypto');
 const mongoose = require('mongoose');
 const Article = require('../models/Article');
 const Comment = require('../models/Comment');
+const CommentRateLimit = require('../models/CommentRateLimit');
+const { getCommentPage } = require('../services/commentQueries');
+const logger = require('../utils/logger');
 
 const RATE_LIMIT_MAX_COMMENTS = 3;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
@@ -9,10 +12,6 @@ const {
   AUTHOR_NAME_MAX_LENGTH,
   CONTENT_MAX_LENGTH
 } = Comment;
-
-// Serializing checks for the same fingerprint prevents simultaneous requests
-// handled by this process from all passing the same recent-comment query.
-const fingerprintLocks = new Map();
 
 class CommentRateLimitError extends Error {
   constructor(retryAfterSeconds) {
@@ -27,32 +26,13 @@ function createDeviceFingerprint(req) {
   // Express does not trust forwarded addresses by default. Prefer the socket
   // address so a guest cannot choose a new identity with a request header.
   const ipAddress = req.socket?.remoteAddress || req.ip || 'unknown-address';
-  const userAgent = req.headers?.['user-agent'] || 'unknown-user-agent';
 
   return crypto
     .createHash('sha256')
-    .update(`comments-v1\0${ipAddress}\0${userAgent}`)
+    // Changing a cookie, device ID, User-Agent or forwarded header cannot
+    // reset this limit. Devices sharing a public address share a quota.
+    .update(`comments-v2\0${ipAddress}`)
     .digest('hex');
-}
-
-async function withFingerprintLock(fingerprint, operation) {
-  const precedingOperation = fingerprintLocks.get(fingerprint) || Promise.resolve();
-  let releaseLock;
-  const currentOperation = new Promise(resolve => {
-    releaseLock = resolve;
-  });
-
-  fingerprintLocks.set(fingerprint, currentOperation);
-  await precedingOperation.catch(() => {});
-
-  try {
-    return await operation();
-  } finally {
-    releaseLock();
-    if (fingerprintLocks.get(fingerprint) === currentOperation) {
-      fingerprintLocks.delete(fingerprint);
-    }
-  }
 }
 
 /**
@@ -61,9 +41,7 @@ async function withFingerprintLock(fingerprint, operation) {
  * request validation without duplicating database access.
  */
 async function listCommentsForArticle(articleId) {
-  return Comment.find({ article: articleId })
-    .sort({ createdAt: -1, _id: -1 })
-    .lean();
+  return (await getCommentPage(articleId)).comments;
 }
 
 async function createCommentForArticle({
@@ -86,36 +64,35 @@ async function createRateLimitedGuestComment({
   content,
   deviceFingerprint
 }) {
-  return withFingerprintLock(deviceFingerprint, async () => {
-    const now = Date.now();
-    const windowStart = new Date(now - RATE_LIMIT_WINDOW_MS);
-    const recentComments = await Comment.find({
-      deviceFingerprint,
-      createdAt: { $gt: windowStart }
-    })
-      .select('createdAt')
-      .sort({ createdAt: 1 })
-      .limit(RATE_LIMIT_MAX_COMMENTS)
-      .lean();
-
-    if (recentComments.length >= RATE_LIMIT_MAX_COMMENTS) {
-      const oldestExpiry = new Date(recentComments[0].createdAt).getTime()
-        + RATE_LIMIT_WINDOW_MS;
-      const retryAfterSeconds = Math.max(
-        1,
-        Math.ceil((oldestExpiry - now) / 1000)
-      );
-      throw new CommentRateLimitError(retryAfterSeconds);
-    }
-
-    // Only successfully persisted comments count toward the next check.
-    return createCommentForArticle({
-      articleId,
-      authorName,
-      content,
-      deviceFingerprint
-    });
-  });
+  const now = new Date();
+  const allowed = { $lt: [{ $size: '$attempts' }, RATE_LIMIT_MAX_COMMENTS] };
+  const update = [
+    { $set: { attempts: { $filter: {
+      input: { $ifNull: ['$attempts', []] }, as: 'at',
+      cond: { $gt: ['$$at', new Date(now.getTime() - RATE_LIMIT_WINDOW_MS)] }
+    } } } },
+    { $set: {
+      allowed,
+      attempts: { $cond: [allowed, { $concatArrays: ['$attempts', [now]] }, '$attempts'] },
+      expiresAt: new Date(now.getTime() + RATE_LIMIT_WINDOW_MS)
+    } }
+  ];
+  let quota;
+  try {
+    quota = await CommentRateLimit.findOneAndUpdate({ _id: deviceFingerprint }, update, { upsert: true, new: true }).lean();
+  } catch (error) {
+    if (error.code !== 11000) throw error;
+    // Two first requests may race to insert the same unique identity.
+    quota = await CommentRateLimit.findOneAndUpdate({ _id: deviceFingerprint }, update, { new: true }).lean();
+  }
+  if (!quota?.allowed) {
+    const retryAfter = Math.max(1, Math.ceil((new Date(quota?.attempts[0]).getTime() + RATE_LIMIT_WINDOW_MS - now.getTime()) / 1000)) || 60;
+    logger.warn('Guest comment limit reached', { route: '/api/articles/:articleId/comments', status: 429 });
+    throw new CommentRateLimitError(retryAfter);
+  }
+  // Reserving quota before insertion keeps concurrent requests bounded even
+  // across server restarts. A database failure may conservatively use a slot.
+  return createCommentForArticle({ articleId, authorName, content, deviceFingerprint });
 }
 
 async function updateCommentById(commentId, changes) {
@@ -210,8 +187,8 @@ exports.getArticleComments = async (req, res, next) => {
       return res.status(404).json({ message: 'Published article not found.' });
     }
 
-    const comments = await listCommentsForArticle(req.params.articleId);
-    return res.json({ comments: comments.map(serializeComment) });
+    const page = await getCommentPage(req.params.articleId, req.query.cursor);
+    return res.json({ ...page, comments: page.comments.map(serializeComment) });
   } catch (error) {
     return handleControllerError(error, res, next);
   }

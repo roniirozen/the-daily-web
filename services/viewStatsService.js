@@ -12,6 +12,9 @@ const HOUR_MS = 60 * 60 * 1000;
 */
 function bucketStartFor(date) {
   const time = date instanceof Date ? date.getTime() : new Date(date).getTime();
+  if (!Number.isFinite(time)) {
+    const error = new Error('Invalid statistics date.'); error.status = 400; throw error;
+  }
   return new Date(Math.floor(time / HOUR_MS) * HOUR_MS);
 }
 
@@ -60,7 +63,7 @@ async function getTimeline(articleId, { from, to } = {}) {
     if (to) match.bucketStart.$lte = new Date(to);
   }
 
-  return ViewStat.find(match).sort({ bucketStart: 1 }).lean();
+  return ViewStat.find(match).select('bucketStart viewCount -_id').sort({ bucketStart: 1 }).lean();
 }
 
 /*
@@ -104,7 +107,13 @@ async function getTotalViewsForArticles(articleIds) {
 */
 async function createViewStat({ article, bucketStart, viewCount = 0 }) {
   assertValidArticleId(article);
-  return ViewStat.create({ article, bucketStart: bucketStartFor(bucketStart), viewCount });
+  validateCount(viewCount);
+  if (!await Article.exists({ _id: article, publishedVersion: { $ne: null } })) {
+    const error = new Error('Published article not found.'); error.status = 404; throw error;
+  }
+  const record = await ViewStat.create({ article, bucketStart: bucketStartFor(bucketStart), viewCount });
+  await Article.updateOne({ _id: article }, { $inc: { totalViews: viewCount } });
+  return record;
 }
 
 async function getViewStatById(id) {
@@ -113,6 +122,9 @@ async function getViewStatById(id) {
 }
 
 async function listViewStats({ article, limit = 100, skip = 0 } = {}) {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100 || !Number.isSafeInteger(skip) || skip < 0) {
+    const error = new Error('Invalid statistics pagination.'); error.status = 400; throw error;
+  }
   const filter = {};
   if (article) {
     assertValidArticleId(article);
@@ -123,12 +135,27 @@ async function listViewStats({ article, limit = 100, skip = 0 } = {}) {
 
 async function updateViewStat(id, { viewCount }) {
   if (!mongoose.isObjectIdOrHexString(id)) return null;
-  return ViewStat.findByIdAndUpdate(id, { $set: { viewCount } }, { new: true });
+  validateCount(viewCount);
+  // Returning the previous value makes the popularity adjustment a delta,
+  // so concurrent view increments are not overwritten by an absolute total.
+  const previous = await ViewStat.findByIdAndUpdate(id, { $set: { viewCount } }, { runValidators: true });
+  if (!previous) return null;
+  await Article.updateOne({ _id: previous.article }, { $inc: { totalViews: viewCount - previous.viewCount } });
+  return ViewStat.findById(id);
 }
 
 async function deleteViewStat(id) {
   if (!mongoose.isObjectIdOrHexString(id)) return null;
-  return ViewStat.findByIdAndDelete(id);
+  const removed = await ViewStat.findByIdAndDelete(id);
+  if (removed) await Article.updateOne({ _id: removed.article }, { $inc: { totalViews: -removed.viewCount } });
+  return removed;
+}
+
+function validateCount(count) {
+  if (!Number.isSafeInteger(count) || count < 0 || count > 1000000000) {
+    const error = new Error('View count must be an integer between 0 and 1000000000.');
+    error.status = 400; throw error;
+  }
 }
 
 module.exports = {

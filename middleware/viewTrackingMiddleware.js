@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const viewStatsService = require('../services/viewStatsService');
+const logger = require('../utils/logger');
 
 /*
   Records one view per public article page request into the existing hourly
@@ -8,9 +9,7 @@ const viewStatsService = require('../services/viewStatsService');
   and never blocks or fails the page render - a dropped view never turns
   into a broken article page.
 
-  Kept separate from controllers/publicController.js (owned in parallel by
-  the comments/article-page work) so it can be wired in with a single line
-  once merged: see the integration note in the PR description.
+  Mounted on the public article route before the rendering controller.
 */
 function trackArticleView(req, res, next) {
   const articleId = req.params.id;
@@ -20,7 +19,7 @@ function trackArticleView(req, res, next) {
     if (!mongoose.isObjectIdOrHexString(articleId)) return;
 
     viewStatsService.recordView(articleId).catch(error => {
-      console.error('Failed to record article view:', error.message);
+      logger.error('Failed to record article view', { error, route: '/articles/:id' });
     });
   });
 

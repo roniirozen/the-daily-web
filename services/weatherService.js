@@ -43,7 +43,7 @@ async function fetchFromOpenMeteo() {
 
   const payload = await response.json();
   const current = payload.current_weather;
-  if (!current) {
+  if (!current || !Number.isFinite(current.temperature) || !Number.isFinite(current.windspeed)) {
     throw new Error('Open-Meteo response missing current_weather');
   }
 
@@ -78,16 +78,8 @@ async function getWeather() {
       });
   }
 
-  try {
-    return await inFlightRequest;
-  } catch (error) {
-    // Serve stale cache rather than nothing if the external API failed and
-    // we still have older-than-fresh data. Otherwise propagate the error.
-    if (cache) {
-      return cache.data;
-    }
-    throw error;
-  }
+  // Expired observations must not be presented as current during an outage.
+  return inFlightRequest;
 }
 
 function clearCache() {

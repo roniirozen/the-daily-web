@@ -1,10 +1,11 @@
 const express = require('express');
 const commentsController = require('../controllers/commentsController');
 const publicController = require('../controllers/publicController');
+const { trackArticleView } = require('../middleware/viewTrackingMiddleware');
 
 const router = express.Router();
 
-router.get('/articles/:id', publicController.getArticle);
+router.get('/articles/:id', trackArticleView, publicController.getArticle);
 
 router.get(
   '/api/articles/:articleId/comments',

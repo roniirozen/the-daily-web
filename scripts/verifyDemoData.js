@@ -1,11 +1,11 @@
-const fs = require('fs');
-const path = require('path');
 const mongoose = require('mongoose');
 const Article = require('../models/Article');
 const User = require('../models/User');
 const ViewStat = require('../models/ViewStat');
+const Comment = require('../models/Comment');
+const logger = require('../utils/logger');
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/web-daily';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/web-daily-demo';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const INFINITE_SCROLL_MINIMUM = 60;
 
@@ -49,16 +49,36 @@ async function getViewStatSummary() {
 }
 
 async function verifyComments(checks) {
-  const commentModelPath = path.join(__dirname, '..', 'models', 'Comment.js');
-
-  if (!fs.existsSync(commentModelPath)) {
-    console.log('COMMENTS: PENDING ROUND-2 COMMENTS BRANCH');
-    return;
-  }
-
-  const Comment = require(commentModelPath);
   const commentCount = await Comment.countDocuments();
   checks.push(result('Comments', commentCount > 0, `${commentCount} comments`));
+}
+
+async function verifyIntegrity(checks) {
+  const [users, articles, totals, comments] = await Promise.all([
+    User.find().select('role passwordHash passwordSalt').lean(),
+    Article.find().select('reporter status editorNote publishedAt publishedVersion.title publicationHistory totalViews').lean(),
+    ViewStat.aggregate([{ $group: { _id: '$article', count: { $sum: '$viewCount' } } }]),
+    Comment.find().select('article authorName content').lean()
+  ]);
+  const userIds = new Set(users.map(user => String(user._id)));
+  const editorIds = new Set(users.filter(user => user.role === 'editor').map(user => String(user._id)));
+  const publicIds = new Set(articles.filter(article => article.publishedVersion).map(article => String(article._id)));
+  const viewTotals = new Map(totals.map(row => [String(row._id), row.count]));
+  checks.push(result('Password storage', users.every(user => /^[a-f0-9]{128}$/.test(user.passwordHash) && /^[a-f0-9]{32}$/.test(user.passwordSalt)), 'scrypt hashes and individual salts; no values printed'));
+  checks.push(result('Article authors', articles.every(article => userIds.has(String(article.reporter))), 'all reporter references resolve'));
+  checks.push(result('Returned correction notes', articles.filter(article => article.status === 'returned').every(article => Boolean(article.editorNote?.trim())), 'all returned articles have a note'));
+  const validHistory = articles.every(article => {
+    const history = article.publicationHistory || [];
+    if (!article.publishedVersion) return history.length === 0;
+    return history.length > 0 && history[0].type === 'initial' &&
+      history.every((entry, i) => editorIds.has(String(entry.editor)) && (!i || (entry.type === 'update' && entry.approvedAt >= history[i - 1].approvedAt))) &&
+      Number(article.publishedAt) === Number(history.at(-1).approvedAt);
+  });
+  checks.push(result('Approval history integrity', validHistory, 'chronological approvals, existing Editors, matching latest publication date'));
+  checks.push(result('Public revisions', ['draft', 'pending', 'returned'].every(status => articles.some(article => article.status === status && article.publishedVersion)), 'approved snapshots survive all revision states'));
+  checks.push(result('Comment references and content', comments.every(comment => publicIds.has(String(comment.article)) && comment.authorName?.trim() && comment.content?.trim()), 'comments refer to approved public articles'));
+  checks.push(result('View statistics references', totals.every(row => publicIds.has(String(row._id))), 'statistics refer to approved public articles'));
+  checks.push(result('Popularity totals', articles.every(article => article.totalViews === (viewTotals.get(String(article._id)) || 0)), 'article totals equal their hourly bucket sums'));
 }
 
 async function verifyDemoData() {
@@ -153,6 +173,7 @@ async function verifyDemoData() {
     ));
 
     await verifyComments(checks);
+    await verifyIntegrity(checks);
 
     console.log('\nDEMO USERS');
     if (demoUsers.length) {
@@ -170,6 +191,6 @@ async function verifyDemoData() {
 }
 
 verifyDemoData().catch(error => {
-  console.error(`Verification failed: ${error.message}`);
+  logger.error('Demo verification failed', { error });
   process.exitCode = 1;
 });

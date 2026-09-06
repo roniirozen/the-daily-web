@@ -11,7 +11,7 @@ function formValues(body = {}) {
 
 function expectedError(error) {
   if (error.code === 11000) return { status: 409, message: 'That username is already in use.' };
-  if ([400, 404, 409].includes(error.status)) return error;
+  if ([400, 403, 404, 409].includes(error.status)) return error;
   if (error.name === 'ValidationError') return { status: 400, message: 'Invalid account details.' };
   return null;
 }

@@ -8,10 +8,11 @@
   <link rel="stylesheet" href="/css/editor.css">
 </head>
 <body class="editor-page">
-  <header class="masthead"><a class="brand" href="/">The Daily Web</a><nav aria-label="Editor navigation"><a href="/editor" aria-current="page">Article desk</a><a href="/editor/users">Users</a></nav></header>
+  <header class="masthead"><a class="brand" href="/">The Daily Web</a><nav aria-label="Editor navigation"><a href="/editor" aria-current="page">Article desk</a><a href="/editor/users">Users</a><form action="/logout" method="post"><button type="submit">Sign out</button></form></nav></header>
   <main>
     <div class="page-heading"><p class="eyebrow">Newsroom / Editor</p><h1>Article desk</h1><p>Review submissions, guide corrections and publish the next story.</p></div>
     <form class="filter-bar" action="/editor" method="get">
+      <label for="search">Title contains</label><input id="search" name="search" type="search" maxlength="200" value="<%= search %>">
       <label for="status">Article status</label>
       <select id="status" name="status">
         <option value="">All statuses</option>
@@ -20,7 +21,7 @@
         <% }) %>
       </select>
       <button type="submit">Apply filter</button>
-      <span class="muted"><%= articles.length %> article<%= articles.length === 1 ? '' : 's' %></span>
+      <span class="muted"><%= total %> article<%= total === 1 ? '' : 's' %></span>
     </form>
     <% if (!articles.length) { %>
       <section class="panel empty"><h2>No articles here yet</h2><p>Submitted stories will appear here. Try another status filter.</p><a href="/editor">View all articles</a></section>
@@ -43,6 +44,12 @@
           </tbody>
         </table>
       </div>
+      <nav class="pagination" aria-label="Article pages">
+        <% const criteria = 'status=' + encodeURIComponent(selectedStatus) + '&search=' + encodeURIComponent(search); %>
+        <% if (page > 1) { %><a href="/editor?<%= criteria %>&amp;page=<%= page - 1 %>">Previous</a><% } %>
+        <span>Page <%= page %> of <%= totalPages %></span>
+        <% if (page < totalPages) { %><a href="/editor?<%= criteria %>&amp;page=<%= page + 1 %>">Next</a><% } %>
+      </nav>
     <% } %>
   </main>
 </body>
