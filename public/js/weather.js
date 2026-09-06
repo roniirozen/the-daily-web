@@ -3,6 +3,9 @@
   // Matches the server-side cache lifetime, so the client never polls faster
   // than fresh data could actually appear.
   const REFRESH_MS = 15 * 60 * 1000;
+  let refreshTimer;
+  let expiryTimer;
+  let loading = false;
 
   const widget = document.getElementById('weather-widget');
   if (!widget) return;
@@ -37,19 +40,32 @@
   }
 
   async function loadWeather() {
+    if (loading) return;
+    loading = true;
+    clearTimeout(refreshTimer);
     try {
       const response = await fetch(WEATHER_URL, { headers: { Accept: 'application/json' } });
       if (!response.ok) {
         throw new Error(`Weather request failed with status ${response.status}`);
       }
       const weather = await response.json();
+      const remaining = new Date(weather.fetchedAt).getTime() + REFRESH_MS - Date.now();
+      if (!Number.isFinite(remaining) || remaining <= 0) throw new Error('Weather expired');
       showContent(weather);
+      clearTimeout(expiryTimer);
+      expiryTimer = setTimeout(showError, remaining);
+      refreshTimer = setTimeout(loadWeather, remaining + 50);
     } catch (error) {
       showError();
+      refreshTimer = setTimeout(loadWeather, 60000);
+    } finally {
+      loading = false;
     }
   }
 
   showLoading();
   loadWeather();
-  setInterval(loadWeather, REFRESH_MS);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) { showLoading(); loadWeather(); }
+  });
 })();

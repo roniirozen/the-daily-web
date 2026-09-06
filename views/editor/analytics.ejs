@@ -37,11 +37,17 @@
       <div id="chart-wrapper">
         <canvas id="analytics-chart" width="960" height="360" aria-label="Article views over time, with publication events marked" role="img"></canvas>
         <ul id="chart-legend" class="chart-legend">
-          <li><span class="legend-swatch views"></span> Views per hour</li>
+          <li><span class="legend-swatch views"></span> Views per interval</li>
           <li><span class="legend-swatch initial"></span> Initial publication</li>
           <li><span class="legend-swatch update"></span> Update approved</li>
         </ul>
       </div>
+    </section>
+
+    <section class="panel" aria-labelledby="impact-heading">
+      <h2 id="impact-heading">Publication and update impact</h2>
+      <p>Compare recorded views in the 24 hours before and after each approval. Counts use the start of each time bucket; an empty interval means no recorded views.</p>
+      <ol id="update-comparisons" aria-live="polite"></ol>
     </section>
 
     <p><a href="/editor/articles/<%= article._id %>">&larr; Back to review</a></p>

@@ -20,6 +20,9 @@
   let hasMore = true;
   let isLoading = false;
   let requestToken = 0;
+  let activeRequest = null;
+  let activeQuery = '';
+  const renderedIds = new Set();
   const knownCategories = new Set();
 
   // Contract with Student 3: viewed article IDs are recorded client-side
@@ -28,7 +31,7 @@
     try {
       const raw = window.localStorage.getItem(VIEWED_STORAGE_KEY);
       const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed.filter(id => typeof id === 'string') : [];
+      return Array.isArray(parsed) ? [...new Set(parsed.filter(id => typeof id === 'string' && /^[a-f0-9]{24}$/i.test(id)))] : [];
     } catch {
       return [];
     }
@@ -68,6 +71,8 @@
   function updateCategoryOptions(articles) {
     let changed = false;
     articles.forEach(article => {
+      if (renderedIds.has(article.id)) return;
+      renderedIds.add(article.id);
       if (article.category && !knownCategories.has(article.category)) {
         knownCategories.add(article.category);
         changed = true;
@@ -94,6 +99,7 @@
     articles.forEach(article => {
       const card = document.createElement('article');
       card.className = 'article-card';
+      card.dataset.articleId = article.id;
 
       const imageWrapper = document.createElement('div');
       if (article.image) {
@@ -144,6 +150,11 @@
   }
 
   function resetFeed() {
+    requestToken += 1;
+    if (activeRequest) activeRequest.abort();
+    isLoading = false;
+    renderedIds.clear();
+    activeQuery = buildQuery(null);
     nextCursor = null;
     hasMore = true;
     container.innerHTML = '';
@@ -158,11 +169,20 @@
     errorMessage.hidden = true;
 
     const thisToken = ++requestToken;
+    activeRequest = new AbortController();
+    let loaded = false;
 
     try {
-      const query = buildQuery(nextCursor);
-      const response = await fetch(`${FEED_URL}?${query}`, {
-        headers: { Accept: 'application/json' }
+      const params = new URLSearchParams(activeQuery);
+      if (nextCursor) params.set('cursor', nextCursor);
+      const query = params.toString();
+      // A long viewed history belongs in a parsed body, not an oversized URL.
+      const longQuery = query.length > 6000;
+      const response = await fetch(longQuery ? FEED_URL : `${FEED_URL}?${query}`, {
+        method: longQuery ? 'POST' : 'GET',
+        headers: { Accept: 'application/json', ...(longQuery ? { 'Content-Type': 'application/json' } : {}) },
+        ...(longQuery ? { body: JSON.stringify(Object.fromEntries(params)) } : {}),
+        signal: activeRequest.signal
       });
 
       if (!response.ok) {
@@ -179,20 +199,21 @@
 
       nextCursor = data.nextCursor || null;
       hasMore = Boolean(data.hasMore);
+      loaded = true;
 
       if (!container.children.length) {
         emptyMessage.hidden = false;
       }
     } catch (error) {
       if (thisToken !== requestToken) return;
-      hasMore = false;
-      if (!container.children.length) {
-        errorMessage.hidden = false;
-      }
+      errorMessage.hidden = false;
     } finally {
       if (thisToken === requestToken) {
         isLoading = false;
         loadingIndicator.hidden = true;
+        if (loaded && hasMore && sentinel.getBoundingClientRect().top < window.innerHeight + 400) {
+          requestAnimationFrame(loadMore);
+        }
       }
     }
   }
@@ -211,6 +232,11 @@
   [categorySelect, viewedSelect, sortSelect].forEach(control => {
     control.addEventListener('change', restartFeed);
   });
+  document.getElementById('feed-retry').addEventListener('click', loadMore);
+  window.addEventListener('storage', event => {
+    if (event.key === VIEWED_STORAGE_KEY && viewedSelect.value !== 'all') restartFeed();
+  });
+  window.addEventListener('pageshow', event => { if (event.persisted) restartFeed(); });
 
   const feedForm = document.getElementById('feed-controls');
   if (feedForm) {
@@ -232,5 +258,9 @@
     });
   }
 
-  loadMore();
+  fetch(`${FEED_URL}/categories`, { headers: { Accept: 'application/json' } })
+    .then(response => { if (!response.ok) throw new Error('Categories unavailable'); return response.json(); })
+    .then(data => updateCategoryOptions(data.categories.map(category => ({ category }))))
+    .catch(() => { /* Categories from successfully loaded stories remain available. */ });
+  restartFeed();
 })();

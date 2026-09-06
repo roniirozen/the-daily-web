@@ -42,10 +42,11 @@
     const plotWidth = plotRight - plotLeft;
     const plotHeight = plotBottom - plotTop;
 
-    const times = timeline.map(point => new Date(point.bucketStart).getTime());
+    const times = timeline.map(point => new Date(point.bucketStart).getTime())
+      .concat(publicationHistory.map(event => new Date(event.approvedAt).getTime()));
     const minTime = Math.min(...times);
     const maxTime = Math.max(...times);
-    const timeSpan = Math.max(maxTime - minTime, 1);
+    const timeSpan = Math.max(maxTime - minTime, 60 * 60 * 1000);
 
     const maxViews = Math.max(...timeline.map(point => point.viewCount), 1);
 
@@ -91,7 +92,7 @@
     ctx.textBaseline = 'alphabetic';
     ctx.translate(14, (plotTop + plotBottom) / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillText('Views per hour', 0, 0);
+    ctx.fillText('Views per interval', 0, 0);
     ctx.restore();
 
     ctx.fillStyle = COLORS.text;
@@ -103,14 +104,8 @@
     // X-axis labels: first, middle, last bucket
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    const labelIndexes = [0, Math.floor((timeline.length - 1) / 2), timeline.length - 1];
-    const seenLabels = new Set();
-    labelIndexes.forEach(index => {
-      if (index < 0 || seenLabels.has(index)) return;
-      seenLabels.add(index);
-      const point = timeline[index];
-      const x = xForTime(new Date(point.bucketStart).getTime());
-      ctx.fillText(formatHour(point.bucketStart), x, plotBottom + 8);
+    [minTime, minTime + timeSpan / 2, minTime + timeSpan].forEach(time => {
+      ctx.fillText(formatHour(time), xForTime(time), plotBottom + 8);
     });
 
     // View bars
@@ -125,8 +120,7 @@
     // Publication events: distinct vertical markers per type
     publicationHistory.forEach(event => {
       const eventTime = new Date(event.approvedAt).getTime();
-      const clampedTime = Math.min(Math.max(eventTime, minTime), maxTime);
-      const x = xForTime(clampedTime);
+      const x = xForTime(eventTime);
       ctx.strokeStyle = event.type === 'initial' ? COLORS.initial : COLORS.update;
       ctx.lineWidth = 2;
       ctx.setLineDash([5, 4]);
@@ -148,6 +142,27 @@
     if (el) el.textContent = totalViews.toLocaleString('en-GB');
   }
 
+  function renderComparisons(timeline, history) {
+    const list = document.getElementById('update-comparisons');
+    list.replaceChildren();
+    history.forEach(event => {
+      const item = document.createElement('li');
+      const date = new Date(event.approvedAt);
+      item.textContent = `${event.type === 'initial' ? 'Initial publication' : 'Update approved'}: ${date.toLocaleString('en-GB')}`;
+      if (event.type === 'update') {
+        const time = date.getTime();
+        const day = 24 * 60 * 60 * 1000;
+        const before = timeline.filter(point => { const at = new Date(point.bucketStart).getTime(); return at >= time - day && at < time; });
+        const after = timeline.filter(point => { const at = new Date(point.bucketStart).getTime(); return at >= time && at < time + day; });
+        const total = points => points.reduce((sum, point) => sum + point.viewCount, 0);
+        item.textContent += ` — previous 24h: ${total(before)} views; following 24h: ${total(after)} views`;
+        if (Date.now() < time + day) item.textContent += ' (following window still in progress)';
+      }
+      list.appendChild(item);
+    });
+    if (!history.length) list.textContent = 'No publication approvals yet.';
+  }
+
   async function init() {
     const canvas = document.getElementById('analytics-chart');
     const emptyState = document.getElementById('chart-empty');
@@ -157,6 +172,7 @@
     try {
       const data = await loadData();
       renderTotals(data.totalViews || 0);
+      renderComparisons(data.timeline || [], data.publicationHistory || []);
 
       if (!data.timeline || !data.timeline.length) {
         if (emptyState) emptyState.hidden = false;

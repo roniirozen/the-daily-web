@@ -36,21 +36,34 @@ function parseViewedIds(raw) {
 */
 exports.getFeed = async (req, res, next) => {
   try {
-    const sort = SORT_OPTIONS.includes(req.query.sort) ? req.query.sort : 'date';
-    const viewedFilter = VIEWED_OPTIONS.includes(req.query.viewed) ? req.query.viewed : 'all';
+    const query = req.method === 'POST' ? req.body : req.query;
+    if (!query || typeof query !== 'object' || Array.isArray(query)) {
+      return res.status(400).json({ message: 'Invalid feed criteria.' });
+    }
+    const limits = { q: 200, category: 80, viewed: 10, sort: 20, cursor: 512, viewedIds: 400000 };
+    for (const [field, limit] of Object.entries(limits)) {
+      if (query[field] !== undefined && (typeof query[field] !== 'string' || query[field].length > limit)) {
+        return res.status(400).json({ message: 'Invalid feed criteria.' });
+      }
+    }
+    if ((query.sort && !SORT_OPTIONS.includes(query.sort)) || (query.viewed && !VIEWED_OPTIONS.includes(query.viewed))) {
+      return res.status(400).json({ message: 'Invalid feed criteria.' });
+    }
+    const sort = query.sort || 'date';
+    const viewedFilter = query.viewed || 'all';
 
     const filter = { publishedVersion: { $exists: true, $ne: null } };
 
-    if (typeof req.query.category === 'string' && req.query.category.trim()) {
-      filter['publishedVersion.category'] = req.query.category.trim();
+    if (query.category?.trim()) {
+      filter['publishedVersion.category'] = query.category.trim();
     }
 
-    if (typeof req.query.q === 'string' && req.query.q.trim()) {
-      filter.$text = { $search: req.query.q.trim() };
+    if (query.q?.trim()) {
+      filter.$text = { $search: query.q.trim() };
     }
 
     if (viewedFilter !== 'all') {
-      const viewedIds = parseViewedIds(req.query.viewedIds);
+      const viewedIds = parseViewedIds(query.viewedIds);
       if (viewedIds.length) {
         filter._id = viewedFilter === 'viewed' ? { $in: viewedIds } : { $nin: viewedIds };
       } else if (viewedFilter === 'viewed') {
@@ -62,8 +75,8 @@ exports.getFeed = async (req, res, next) => {
     const sortField = sort === 'popularity' ? 'totalViews' : 'publishedAt';
 
     let cursor = null;
-    if (typeof req.query.cursor === 'string' && req.query.cursor) {
-      cursor = decodeCursor(req.query.cursor);
+    if (query.cursor) {
+      cursor = decodeCursor(query.cursor);
       if (!cursor || !('value' in cursor) || !('id' in cursor) ||
           !mongoose.isObjectIdOrHexString(cursor.id)) {
         return res.status(400).json({ message: 'Invalid pagination cursor.' });
@@ -72,6 +85,10 @@ exports.getFeed = async (req, res, next) => {
 
     if (cursor) {
       const cursorValue = sortField === 'publishedAt' ? new Date(cursor.value) : Number(cursor.value);
+      if ((sortField === 'publishedAt' && (typeof cursor.value !== 'string' || !Number.isFinite(cursorValue.getTime()))) ||
+          (sortField === 'totalViews' && (!Number.isSafeInteger(cursor.value) || cursor.value < 0))) {
+        return res.status(400).json({ message: 'Invalid pagination cursor.' });
+      }
       filter.$or = [
         { [sortField]: { $lt: cursorValue } },
         { [sortField]: cursorValue, _id: { $lt: new mongoose.Types.ObjectId(cursor.id) } }
@@ -111,4 +128,13 @@ exports.getFeed = async (req, res, next) => {
   } catch (error) {
     return next(error);
   }
+};
+
+exports.getCategories = async (req, res, next) => {
+  try {
+    const categories = await Article.distinct('publishedVersion.category', {
+      publishedVersion: { $exists: true, $ne: null }
+    });
+    res.json({ categories: categories.filter(Boolean).sort() });
+  } catch (error) { next(error); }
 };
