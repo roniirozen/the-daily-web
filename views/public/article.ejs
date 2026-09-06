@@ -39,7 +39,10 @@
 
   <main class="article-page">
 
-    <article class="container article-detail">
+    <article
+      class="container article-detail"
+      data-article-id="<%= article._id %>"
+    >
 
       <a href="/" class="back-link">
         ← Back to news
@@ -208,6 +211,7 @@
   </footer>
 
   <script src="/js/comments.js" defer></script>
+  <script src="/js/viewTracking.js" defer></script>
 
 </body>
 </html>
