@@ -2,34 +2,37 @@
 const commentForm = document.getElementById('comment-form');
 
 if (commentForm) {
+  const authorNameInput = document.getElementById('authorName');
+  const contentInput = document.getElementById('content');
+  const messageElement = document.getElementById('comment-message');
+  const submitButton = commentForm.querySelector('button[type="submit"]');
+
+  function showMessage(message, state) {
+    messageElement.textContent = message;
+    if (state) {
+      messageElement.dataset.state = state;
+    } else {
+      delete messageElement.dataset.state;
+    }
+  }
+
   commentForm.addEventListener('submit', async (event) => {
     event.preventDefault();
 
     const articleId = commentForm.dataset.articleId;
-
-    const authorNameInput =
-      document.getElementById('authorName');
-
-    const contentInput =
-      document.getElementById('content');
-
-    const messageElement =
-      document.getElementById('comment-message');
-
-    const submitButton =
-      commentForm.querySelector('button[type="submit"]');
-
     const authorName = authorNameInput.value.trim();
     const content = contentInput.value.trim();
 
     if (!authorName || !content) {
-      messageElement.textContent =
-        'Please enter your name and a comment.';
+      showMessage('Please enter your name and a comment.', 'error');
       return;
     }
 
+    const originalButtonText = submitButton.textContent;
     submitButton.disabled = true;
-    messageElement.textContent = '';
+    submitButton.textContent = 'Posting...';
+    commentForm.setAttribute('aria-busy', 'true');
+    showMessage('', null);
 
     try {
       const response = await fetch(
@@ -48,11 +51,13 @@ if (commentForm) {
         }
       );
 
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        messageElement.textContent =
-          result.message || 'Unable to post comment.';
+        const fallbackMessage = response.status === 429
+          ? 'You have reached the comment limit. Please wait a minute and try again.'
+          : 'Unable to post comment.';
+        showMessage(result.message || fallbackMessage, 'error');
         return;
       }
 
@@ -66,41 +71,34 @@ if (commentForm) {
         noCommentsMessage.remove();
       }
 
-      const commentElement =
-        document.createElement('article');
+      const commentElement = document.createElement('article');
 
       commentElement.className = 'comment';
       commentElement.dataset.commentId = result.comment._id;
 
-      const commentHeader =
-        document.createElement('div');
+      const commentHeader = document.createElement('div');
 
       commentHeader.className = 'comment-header';
 
-      const authorElement =
-        document.createElement('strong');
+      const authorElement = document.createElement('strong');
 
-      authorElement.textContent =
-        result.comment.authorName;
+      authorElement.textContent = result.comment.authorName;
 
-      const timeElement =
-        document.createElement('time');
+      const timeElement = document.createElement('time');
+      const createdAt = new Date(result.comment.createdAt);
 
-      timeElement.textContent =
-        new Date(
-          result.comment.createdAt
-        ).toLocaleString();
+      timeElement.dateTime = createdAt.toISOString();
+      timeElement.textContent = createdAt.toLocaleString('en-GB');
 
       commentHeader.append(
         authorElement,
         timeElement
       );
 
-      const contentElement =
-        document.createElement('p');
+      const contentElement = document.createElement('p');
 
-      contentElement.textContent =
-        result.comment.content;
+      contentElement.className = 'comment-content';
+      contentElement.textContent = result.comment.content;
 
       commentElement.append(
         commentHeader,
@@ -110,14 +108,13 @@ if (commentForm) {
       commentsList.prepend(commentElement);
 
       commentForm.reset();
-
-      messageElement.textContent =
-        'Comment posted successfully.';
+      showMessage('Comment posted successfully.', 'success');
     } catch (error) {
-      messageElement.textContent =
-        'Unable to connect to the server.';
+      showMessage('Unable to connect to the server.', 'error');
     } finally {
       submitButton.disabled = false;
+      submitButton.textContent = originalButtonText;
+      commentForm.removeAttribute('aria-busy');
     }
   });
 }

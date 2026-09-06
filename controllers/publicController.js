@@ -1,4 +1,5 @@
 const Article = require('../models/Article');
+const Comment = require('../models/Comment');
 
 exports.getArticle = async (req, res, next) => {
   try {
@@ -19,7 +20,13 @@ exports.getArticle = async (req, res, next) => {
     if (!article) {
       return res.status(404).send('Article not found');
     }
-    res.render('public/article', { article, comments: [] });
+
+    const comments = await Comment.find({ article: article._id })
+      .select('authorName content createdAt updatedAt')
+      .sort({ createdAt: -1, _id: -1 })
+      .lean();
+
+    res.render('public/article', { article, comments });
   } catch (error) {
     next(error);
   }
