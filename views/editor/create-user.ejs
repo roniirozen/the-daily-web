@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= pageTitle %> | The Daily Web</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/editor.css">
+</head>
+<body class="editor-page">
+  <header class="masthead"><a class="brand" href="/">The Daily Web</a><a href="/editor/users">&larr; User administration</a></header>
+  <main>
+    <div class="page-heading"><p class="eyebrow">Newsroom / New account</p><h1>Create user</h1><p>Give a new team member access to the newsroom.</p></div>
+    <section class="panel account-form">
+      <% if (errorMessage) { %><p class="form-error" role="alert"><%= errorMessage %></p><% } %>
+      <form action="/editor/users" method="post">
+        <label for="username">Username</label><input id="username" name="username" value="<%= values.username %>" minlength="3" maxlength="60" pattern="[a-zA-Z0-9_.\-]{3,60}" autocomplete="off" aria-describedby="username-help" required>
+        <p id="username-help" class="field-help">3–60 letters, numbers, dots, underscores or hyphens. Stored in lowercase.</p>
+        <label for="role">Role</label><select id="role" name="role" required aria-describedby="role-help"><option value="reporter" <%= values.role === 'reporter' ? 'selected' : '' %>>Reporter</option><option value="editor" <%= values.role === 'editor' ? 'selected' : '' %>>Editor</option></select>
+        <p id="role-help" class="field-help">Reporters write articles. Editors review articles and administer users.</p>
+        <label for="password">Password</label><input id="password" name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" aria-describedby="password-help" required>
+        <p id="password-help" class="field-help">8–128 characters. Passwords are never displayed after submission.</p>
+        <div class="form-actions"><button type="submit">Create user</button><a href="/editor/users">Cancel</a></div>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= pageTitle %> | The Daily Web</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/editor.css">
+</head>
+<body class="editor-page">
+  <header class="masthead"><a class="brand" href="/">The Daily Web</a><nav aria-label="Editor navigation"><a href="/editor">Article desk</a><a href="/editor/users" aria-current="page">Users</a></nav></header>
+  <main>
+    <div class="page-heading"><p class="eyebrow">Newsroom / Administration</p><h1>People in the newsroom</h1><p>Manage Reporter and Editor accounts and access.</p><a class="button-link" href="/editor/users/new">Create user</a></div>
+    <form class="filter-bar" action="/editor/users" method="get">
+      <label for="search">Username starts with</label><input id="search" type="search" name="search" maxlength="60" value="<%= search %>" placeholder="Search usernames">
+      <button type="submit">Search</button><a href="/editor/users">Clear</a><span class="muted"><%= total %> user<%= total === 1 ? '' : 's' %></span>
+    </form>
+    <% if (!users.length) { %>
+      <section class="panel empty"><h2>No users found</h2><p>Try a different username prefix or create an account.</p></section>
+    <% } else { %>
+      <div class="table-scroll"><table>
+        <caption class="sr-only">Newsroom accounts sorted by username</caption>
+        <thead><tr><th scope="col">Username</th><th scope="col">Role</th><th scope="col">Created</th><th scope="col">Action</th></tr></thead>
+        <tbody><% users.forEach(user => { %>
+          <tr><th scope="row"><%= user.username %></th><td><span class="badge"><%= user.role %></span></td><td><time datetime="<%= user.createdAt.toISOString() %>"><%= user.createdAt.toLocaleDateString('en-GB') %></time></td><td><a href="/editor/users/<%= user._id %>/edit">Manage<span class="sr-only"> <%= user.username %></span></a></td></tr>
+        <% }); %></tbody>
+      </table></div>
+      <nav class="pagination" aria-label="User list pages">
+        <% if (page > 1) { %><a href="/editor/users?search=<%= encodeURIComponent(search) %>&amp;page=<%= page - 1 %>">Previous</a><% } %>
+        <span>Page <%= page %> of <%= totalPages %></span>
+        <% if (page < totalPages) { %><a href="/editor/users?search=<%= encodeURIComponent(search) %>&amp;page=<%= page + 1 %>">Next</a><% } %>
+      </nav>
+    <% } %>
+  </main>
+</body>
+</html>

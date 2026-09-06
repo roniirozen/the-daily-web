@@ -46,6 +46,15 @@ table small { display: block; font-weight: normal; margin-top: .3rem; }
 .empty { padding: 2rem; text-align: center; }
 .editor-page :focus-visible { outline: 3px solid #2579c2; outline-offset: 3px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.masthead nav, .form-actions, .pagination { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+.masthead [aria-current="page"] { font-weight: bold; }
+.editor-page .button-link { display: inline-block; background: #245b92; color: white; padding: .7rem 1rem; border-radius: .35rem; text-decoration: none; }
+.account-form { max-width: 760px; }
+.account-form select { width: 100%; margin-bottom: 1rem; }
+.field-help { color: #526174; font-size: .9rem; margin: -.5rem 0 1.3rem; }
+.form-error { background: #fff0ef; border-left: 4px solid #a42d32; padding: 1rem; color: #84262b; margin-bottom: 1.5rem; overflow-wrap: anywhere; }
+.pagination { justify-content: center; margin: 1.5rem 0; }
+.account-form details form { padding-top: 1rem; }
 @media (max-width: 760px) {
   .version-grid, .decision-grid { grid-template-columns: 1fr; }
   .masthead { align-items: flex-start; flex-direction: column; }
