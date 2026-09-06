@@ -5,14 +5,19 @@ const logDirectory = path.join(__dirname, '..', 'logs');
 const contextFields = ['method', 'route', 'status', 'userId', 'role', 'reason', 'port'];
 
 function errorDetails(error) {
-  const details = { name: error.name || 'Error' };
-  if (typeof error.code === 'number' || /^[A-Z_0-9]+$/.test(error.code || '')) {
+  const details = { name: /^[A-Za-z][A-Za-z0-9]{0,63}$/.test(error.name) ? error.name : 'Error' };
+  if (typeof error.code === 'number' ||
+      (typeof error.code === 'string' && /^[A-Z_0-9]{1,64}$/.test(error.code))) {
     details.code = error.code;
   }
   // Error messages can contain submitted values, tokens or database URLs.
   // Keep stack locations for debugging, without the message or nested causes.
   if (process.env.NODE_ENV !== 'production' && typeof error.stack === 'string') {
-    details.stack = error.stack.split('\n').filter(line => /^\s+at /.test(line));
+    const heading = error.message ? `${error.name}: ${error.message}` : error.name;
+    // Remove the complete message first: user input may itself contain lines
+    // beginning with "at", which must never be mistaken for stack locations.
+    const locations = error.stack.startsWith(heading) ? error.stack.slice(heading.length) : '';
+    details.stack = locations.split('\n').filter(line => /^\s+at /.test(line));
   }
   return details;
 }
