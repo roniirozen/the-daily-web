@@ -4,26 +4,31 @@ const articleVersionSchema = new mongoose.Schema(
   {
     title: {
       type: String,
-      required: true,
-      trim: true
+      trim: true,
+      default: ''
     },
+
     summary: {
       type: String,
-      required: true,
-      trim: true
+      trim: true,
+      default: ''
     },
+
     content: {
-      type: String,
-      required: true
-    },
-    imageUrl: {
       type: String,
       default: ''
     },
+
+    imageUrl: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+
     category: {
       type: String,
-      required: true,
-      trim: true
+      trim: true,
+      default: ''
     }
   },
   {
@@ -36,23 +41,20 @@ const articleSchema = new mongoose.Schema(
     reporter: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true
+      required: true,
+      index: true
     },
 
     status: {
       type: String,
-      enum: [
-        'draft',
-        'pending',
-        'published',
-        'returned'
-      ],
-      default: 'draft'
+      enum: ['draft', 'pending', 'published', 'returned'],
+      default: 'draft',
+      index: true
     },
 
     workingVersion: {
       type: articleVersionSchema,
-      required: true
+      default: () => ({})
     },
 
     publishedVersion: {
@@ -79,5 +81,8 @@ const articleSchema = new mongoose.Schema(
     timestamps: true
   }
 );
+
+articleSchema.index({ reporter: 1, status: 1 });
+articleSchema.index({ publishedAt: -1 });
 
 module.exports = mongoose.model('Article', articleSchema);
