@@ -1,4 +1,5 @@
 const Article = require('../models/Article');
+const { validateArticleInput } = require('../utils/articleValidation');
 
 function getReporterId(req) {
   return req.session?.user?.id || null;
@@ -42,16 +43,13 @@ exports.createArticle = async (req, res, next) => {
       });
     }
 
+    const input = validateArticleInput(req.body);
+    if (input.error) {
+      return res.status(400).json({ message: input.error });
+    }
     const article = await Article.create({
       reporter: reporterId,
-
-      workingVersion: {
-        title: req.body.title || '',
-        summary: req.body.summary || '',
-        content: req.body.content || '',
-        imageUrl: req.body.imageUrl || '',
-        category: req.body.category || ''
-      },
+      workingVersion: input.fields,
 
       status: 'draft',
       lastAutosavedAt: new Date()
@@ -112,6 +110,15 @@ exports.autosaveArticle = async (req, res, next) => {
       });
     }
 
+    const input = validateArticleInput(req.body);
+    if (input.error) {
+      return res.status(400).json({ message: input.error });
+    }
+    const versionChanges = {};
+    for (const [name, value] of Object.entries(input.fields)) {
+      versionChanges['workingVersion.' + name] = value;
+    }
+
     // Check the revision and status again in MongoDB, not just in this request.
     // Neither operation writes to publishedVersion.
     const updated = await Article.findOneAndUpdate(
@@ -123,11 +130,7 @@ exports.autosaveArticle = async (req, res, next) => {
       },
       {
         $set: {
-          'workingVersion.title': req.body.title ?? '',
-          'workingVersion.summary': req.body.summary ?? '',
-          'workingVersion.content': req.body.content ?? '',
-          'workingVersion.imageUrl': req.body.imageUrl ?? '',
-          'workingVersion.category': req.body.category ?? '',
+          ...versionChanges,
           status: article.status === 'published' ? 'draft' : article.status,
           lastAutosavedAt: new Date()
         },
@@ -170,14 +173,9 @@ exports.submitForReview = async (req, res, next) => {
       });
     }
 
-    const version = article.workingVersion;
-    if (
-      !version.title.trim() || !version.summary.trim() ||
-      !version.content.trim() || !version.category.trim()
-    ) {
-      return res.status(400).json({
-        message: 'Title, summary, content and category are required'
-      });
+    const input = validateArticleInput(article.workingVersion?.toObject(), true);
+    if (input.error) {
+      return res.status(400).json({ message: input.error });
     }
 
     // Only submit the exact revision whose publication fields were validated.
