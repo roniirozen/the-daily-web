@@ -17,6 +17,7 @@
   >
 
   <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/comments.css">
 </head>
 
 <body>
@@ -115,13 +116,13 @@
                     <%= comment.authorName %>
                   </strong>
 
-                  <time>
+                  <time datetime="<%= new Date(comment.createdAt).toISOString() %>">
                     <%= new Date(comment.createdAt).toLocaleString('en-GB') %>
                   </time>
 
                 </div>
 
-                <p>
+                <p class="comment-content">
                   <%= comment.content %>
                 </p>
 

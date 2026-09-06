@@ -1,0 +1,26 @@
+.comment-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comment-form input:focus,
+.comment-form textarea:focus {
+  outline: 2px solid #1d1d1b;
+  outline-offset: 2px;
+}
+
+.form-message[data-state="success"] {
+  color: #176b36;
+}
+
+.form-message[data-state="error"] {
+  color: #a3261f;
+}
+
+@media (max-width: 560px) {
+  .comment-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+}
