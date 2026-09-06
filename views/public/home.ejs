@@ -60,41 +60,21 @@
             </div>
           </div>
 
-          <div id="articles-container" class="articles-grid">
+          <div id="articles-container" class="articles-grid" aria-live="polite"></div>
 
-            <article class="article-card">
+          <p id="feed-empty" class="empty-message" hidden>
+            No articles are available right now.
+          </p>
 
-              <div class="article-image placeholder-image">
-                Article image
-              </div>
+          <p id="feed-error" class="empty-message feed-error" hidden>
+            Unable to load the news feed. Please try again in a moment.
+          </p>
 
-              <div class="article-content">
-
-                <div class="article-meta">
-                  <span>Technology</span>
-                  <span>September 6, 2026</span>
-                </div>
-
-                <h3>
-                  <a href="#">
-                    Example headline for The Daily Web
-                  </a>
-                </h3>
-
-                <p>
-                  Article summaries will appear here once the news feed
-                  is connected to the database.
-                </p>
-
-                <div class="article-author">
-                  By Example Reporter
-                </div>
-
-              </div>
-
-            </article>
-
+          <div id="feed-loading" class="feed-loading" hidden>
+            Loading more stories...
           </div>
+
+          <div id="feed-sentinel" aria-hidden="true"></div>
 
         </div>
 
@@ -123,6 +103,8 @@
       <p>&copy; 2026 The Daily Web</p>
     </div>
   </footer>
+
+  <script src="/js/feed.js" defer></script>
 
 </body>
 </html>
