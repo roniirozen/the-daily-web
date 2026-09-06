@@ -305,6 +305,19 @@ a {
   .hero {
     padding: 60px 0;
   }
+
+  .feed-controls {
+    gap: 12px;
+  }
+
+  .feed-control {
+    flex: 1 1 45%;
+    min-width: 0;
+  }
+
+  .feed-control-search {
+    flex-basis: 100%;
+  }
 }
 
 @media (max-width: 520px) {
@@ -318,6 +331,30 @@ a {
 
   .article-content {
     padding: 18px;
+  }
+
+  .feed-controls {
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  .feed-control,
+  .feed-control-search {
+    flex-basis: auto;
+    width: 100%;
+  }
+
+  .feed-control input,
+  .feed-control select {
+    width: 100%;
+  }
+
+  .weather-content .weather-temperature {
+    font-size: 1.6rem;
+  }
+
+  .section-heading h2 {
+    font-size: 1.5rem;
   }
 }
 
