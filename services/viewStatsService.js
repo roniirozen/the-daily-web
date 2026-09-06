@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const ViewStat = require('../models/ViewStat');
+const Article = require('../models/Article');
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -31,11 +32,18 @@ async function recordView(articleId, when = new Date()) {
   assertValidArticleId(articleId);
   const bucketStart = bucketStartFor(when);
 
-  return ViewStat.findOneAndUpdate(
-    { article: articleId, bucketStart },
-    { $inc: { viewCount: 1 } },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
-  );
+  const [bucket] = await Promise.all([
+    ViewStat.findOneAndUpdate(
+      { article: articleId, bucketStart },
+      { $inc: { viewCount: 1 } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    ),
+    // Kept as a best-effort denormalized counter for popularity sorting on
+    // the feed; the authoritative per-hour history is the ViewStat bucket.
+    Article.updateOne({ _id: articleId }, { $inc: { totalViews: 1 } })
+  ]);
+
+  return bucket;
 }
 
 /*
