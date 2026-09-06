@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Session = require('../models/Session');
+const logger = require('../utils/logger');
 
 const {
   verifyPassword
@@ -46,6 +47,7 @@ exports.login = async (req, res, next) => {
       String(req.body?.password || '');
 
     if (!username || !password) {
+      logger.warn('Login failed', { reason: 'missing_credentials' });
       return res.status(400).render(
         'auth/login',
         {
@@ -67,6 +69,7 @@ exports.login = async (req, res, next) => {
     );
 
     if (!user || !passwordIsValid) {
+      logger.warn('Login failed', { reason: 'invalid_credentials' });
       return res.status(401).render(
         'auth/login',
         {
@@ -102,6 +105,8 @@ exports.login = async (req, res, next) => {
       }
     );
 
+    logger.info('Login succeeded', { userId: user._id.toString(), role: user.role });
+
     if (user.role === 'editor') {
       return res.redirect('/editor');
     }
@@ -129,6 +134,7 @@ exports.logout = async (req, res, next) => {
     }
 
     res.clearCookie(COOKIE_NAME);
+    logger.info('Logout completed', { userId: req.currentUser?._id.toString() });
 
     res.redirect('/');
   } catch (error) {

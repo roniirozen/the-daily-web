@@ -1,4 +1,5 @@
 const Session = require('../models/Session');
+const logger = require('../utils/logger');
 
 const {
   COOKIE_NAME,
@@ -29,6 +30,7 @@ async function loadCurrentUser(req, res, next) {
       .populate('user');
 
     if (!session || !session.user) {
+      logger.warn('Session rejected', { reason: 'invalid_or_expired_session' });
       return next();
     }
 
@@ -54,6 +56,7 @@ async function loadCurrentUser(req, res, next) {
 
 function requireAuthentication(req, res, next) {
   if (!req.currentUser) {
+    logger.warn('Authentication required', { method: req.method, route: req.baseUrl || '/' });
     if (req.method !== 'GET') {
       return res.status(401).json({ message: 'Authentication required' });
     }
@@ -66,12 +69,17 @@ function requireAuthentication(req, res, next) {
 function requireRole(...allowedRoles) {
   return function checkRole(req, res, next) {
     if (!req.currentUser) {
+      logger.warn('Authentication required', { method: req.method, route: req.baseUrl || '/' });
       return res.status(401).send(
         'Authentication required'
       );
     }
 
     if (!allowedRoles.includes(req.currentUser.role)) {
+      logger.warn('Access denied', {
+        method: req.method, route: req.baseUrl || '/',
+        userId: req.currentUser._id.toString(), role: req.currentUser.role
+      });
       return res.status(403).send(
         'You do not have permission to access this resource'
       );
