@@ -38,7 +38,12 @@ function readCookie(req, cookieName) {
       .trim();
 
     if (name === cookieName) {
-      return decodeURIComponent(value);
+      try {
+        return decodeURIComponent(value);
+      } catch (error) {
+        if (error instanceof URIError) return null;
+        throw error;
+      }
     }
   }
 
