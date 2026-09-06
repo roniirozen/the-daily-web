@@ -60,10 +60,49 @@
             </div>
           </div>
 
+          <form id="feed-controls" class="feed-controls" role="search">
+
+            <div class="feed-control feed-control-search">
+              <label for="feed-search">Search</label>
+              <input
+                id="feed-search"
+                type="search"
+                name="q"
+                placeholder="Search headlines..."
+                autocomplete="off"
+              >
+            </div>
+
+            <div class="feed-control">
+              <label for="feed-category">Category</label>
+              <select id="feed-category" name="category">
+                <option value="">All categories</option>
+              </select>
+            </div>
+
+            <div class="feed-control">
+              <label for="feed-viewed">Viewed</label>
+              <select id="feed-viewed" name="viewed">
+                <option value="all">All articles</option>
+                <option value="unviewed">Not viewed yet</option>
+                <option value="viewed">Already viewed</option>
+              </select>
+            </div>
+
+            <div class="feed-control">
+              <label for="feed-sort">Sort by</label>
+              <select id="feed-sort" name="sort">
+                <option value="date">Publication date</option>
+                <option value="popularity">Popularity</option>
+              </select>
+            </div>
+
+          </form>
+
           <div id="articles-container" class="articles-grid" aria-live="polite"></div>
 
           <p id="feed-empty" class="empty-message" hidden>
-            No articles are available right now.
+            No articles match your search right now.
           </p>
 
           <p id="feed-error" class="empty-message feed-error" hidden>

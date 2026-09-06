@@ -110,6 +110,48 @@ a {
   font-size: 2rem;
 }
 
+/* Feed controls */
+
+.feed-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 28px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #deded9;
+  border-radius: 12px;
+}
+
+.feed-control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 140px;
+}
+
+.feed-control-search {
+  flex: 1 1 220px;
+}
+
+.feed-control label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #686861;
+}
+
+.feed-control input,
+.feed-control select {
+  padding: 10px 12px;
+  font: inherit;
+  border: 1px solid #bdbdb7;
+  border-radius: 8px;
+  background: #ffffff;
+  color: inherit;
+}
+
 /* Articles */
 
 .articles-grid {
