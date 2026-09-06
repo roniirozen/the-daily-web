@@ -5,6 +5,10 @@ const indexRoutes = require('./routes');
 const publicRoutes = require('./routes/publicRoutes');
 const authRoutes = require('./routes/authRoutes');
 const reporterRoutes = require('./routes/reporterRoutes');
+const editorRoutes = require('./routes/editorRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const feedRoutes = require('./routes/feedRoutes');
+const weatherRoutes = require('./routes/weatherRoutes');
 const { loadCurrentUser } = require('./middleware/authMiddleware');
 
 const app = express();
@@ -22,6 +26,10 @@ app.use('/', indexRoutes);
 app.use('/', publicRoutes);
 app.use('/', authRoutes);
 app.use('/reporter', reporterRoutes);
+app.use('/editor/analytics', analyticsRoutes);
+app.use('/editor', editorRoutes);
+app.use('/api/feed', feedRoutes);
+app.use('/api/weather', weatherRoutes);
 
 app.use((req, res) => {
   res.status(404).send('Page not found');
