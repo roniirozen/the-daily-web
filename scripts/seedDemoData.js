@@ -1,5 +1,7 @@
+const crypto = require('crypto');
 const mongoose = require('mongoose');
 const Article = require('../models/Article');
+const Comment = require('../models/Comment');
 const Session = require('../models/Session');
 const User = require('../models/User');
 const ViewStat = require('../models/ViewStat');
@@ -94,6 +96,32 @@ const RETURN_NOTES = [
   'Add context from the affected community and correct the event timeline.',
   'Please shorten the summary and distinguish confirmed facts from estimates.',
   'The editor needs a second source for the central claim in paragraph three.'
+];
+
+const COMMENT_AUTHORS = [
+  'Noa Levi',
+  'Daniel Cohen',
+  'Maya Barak',
+  'Ari Katz',
+  'Lior Shalev',
+  'Rina David',
+  'Sam Green',
+  'Yael Amir',
+  'Omer Tal',
+  'Nina Brooks'
+];
+
+const COMMENT_TEXTS = [
+  'This report gives useful context that was missing from earlier coverage.',
+  'I would be interested in a follow-up once the next set of figures is released.',
+  'The local perspective makes the wider impact much easier to understand.',
+  'Thanks for explaining both the benefits and the remaining open questions.',
+  'The timeline and source details helped clarify how this project developed.',
+  'This is an encouraging result, although the long-term outcome still matters.',
+  'Please continue tracking how the plan affects residents over the coming months.',
+  'The comparison with previous efforts is especially helpful for readers.',
+  'It is good to see concrete numbers alongside the interviews in this article.',
+  'I shared this with colleagues who have been following the same subject.'
 ];
 
 function daysAgo(days, extraHours = 0) {
@@ -256,6 +284,35 @@ function buildViewStats(article, articleIndex) {
   return buckets;
 }
 
+function buildComments(articles) {
+  const publicArticles = articles.filter(article => article.publishedVersion);
+
+  return publicArticles.flatMap((article, articleIndex) => {
+    const commentCount = 1 + (articleIndex % 3);
+    const firstApproval = article.publicationHistory[0].approvedAt;
+    const availableTime = NOW.getTime() - firstApproval.getTime();
+
+    return Array.from({ length: commentCount }, (_, commentIndex) => {
+      const progress = (commentIndex + 1) / (commentCount + 1);
+      const createdAt = new Date(firstApproval.getTime() + availableTime * progress);
+      const category = article.publishedVersion.category.toLowerCase();
+
+      return {
+        article: article._id,
+        authorName: COMMENT_AUTHORS[(articleIndex + commentIndex) % COMMENT_AUTHORS.length],
+        content: COMMENT_TEXTS[(articleIndex * 2 + commentIndex) % COMMENT_TEXTS.length] +
+          ` I am following this ${category} story for future updates.`,
+        deviceFingerprint: crypto
+          .createHash('sha256')
+          .update(`demo-comment-device-${articleIndex}-${commentIndex}`)
+          .digest('hex'),
+        createdAt,
+        updatedAt: createdAt
+      };
+    });
+  });
+}
+
 async function removePreviousDemoData() {
   const usernames = DEMO_USERS.map(user => user.username);
   const previousUsers = await User.find({ username: { $in: usernames } }).select('_id').lean();
@@ -269,6 +326,7 @@ async function removePreviousDemoData() {
   const previousArticleIds = previousArticles.map(article => article._id);
 
   if (previousArticleIds.length) {
+    await Comment.deleteMany({ article: { $in: previousArticleIds } });
     await ViewStat.deleteMany({ article: { $in: previousArticleIds } });
     await Article.deleteMany({ _id: { $in: previousArticleIds } });
   }
@@ -326,6 +384,7 @@ async function seedDemoData() {
       (_, index) => buildArticle(index, reporters, editors)
     );
     const viewStats = articles.flatMap(buildViewStats);
+    const comments = buildComments(articles);
     const viewTotalsByArticle = new Map();
 
     for (const stat of viewStats) {
@@ -341,6 +400,7 @@ async function seedDemoData() {
 
     await Article.insertMany(articles);
     await insertInBatches(ViewStat, viewStats);
+    await insertInBatches(Comment, comments);
 
     const publishedSnapshots = articles.filter(article => article.publishedVersion).length;
     const multipleApprovalArticles = articles.filter(article =>
@@ -358,6 +418,7 @@ async function seedDemoData() {
     console.log(`  Articles with multiple approvals: ${multipleApprovalArticles}`);
     console.log(`  ViewStat documents: ${viewStats.length}`);
     console.log(`  Total represented views: ${totalViews}`);
+    console.log(`  Comments: ${comments.length}`);
     console.log(`  Categories: ${CATEGORIES.join(', ')}`);
     printCredentials();
   } finally {
