@@ -1,0 +1,69 @@
+<%
+  const version = article ? article.workingVersion : {};
+  const pending = article && article.status === 'pending';
+%>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= pageTitle %> | The Daily Web</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/reporter.css">
+  <script src="/js/reporterEditor.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-content">
+      <a href="/" class="logo">The Daily Web</a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="/reporter">My articles</a>
+        <form method="POST" action="/logout"><button class="text-button">Sign out</button></form>
+      </nav>
+    </div>
+  </header>
+  <main class="container newsroom editor-workspace">
+    <a class="back-link" href="/reporter">&larr; Back to articles</a>
+    <div class="workspace-heading">
+      <div><p class="section-label">REPORTER DESK</p><h1><%= pageTitle %></h1></div>
+      <span id="article-status" class="status-badge"><%= article ? article.status : 'draft' %></span>
+    </div>
+    <% if (article && article.publishedVersion) { %>
+      <p class="notice">The currently approved version remains public until your new version is approved. <a href="/articles/<%= article._id %>">View public version</a></p>
+    <% } %>
+    <% if (article && article.status === 'returned' && article.editorNote) { %>
+      <p class="editor-note"><strong>Editor note:</strong> <%= article.editorNote %></p>
+    <% } %>
+    <p id="pending-notice" class="notice" <%= pending ? '' : 'hidden' %>>This article is awaiting editor approval and cannot be edited.</p>
+    <noscript><p class="notice">Enable JavaScript to create, autosave, and submit an article.</p></noscript>
+    <form id="article-editor" class="workspace-card" data-article-id="<%= article ? article._id : '' %>" data-status="<%= article ? article.status : 'draft' %>">
+      <fieldset id="article-fields" <%= pending ? 'disabled' : '' %>>
+        <legend class="visually-hidden">Article content</legend>
+        <div class="form-group"><label for="title">Title</label>
+          <input id="title" name="title" maxlength="200" required value="<%= version.title || '' %>">
+        </div>
+        <div class="form-group"><label for="summary">Summary</label>
+          <textarea id="summary" name="summary" rows="3" maxlength="1000" required><%= version.summary || '' %></textarea>
+        </div>
+        <div class="form-group"><label for="content">Article content</label>
+          <p id="content-help" class="field-help">Write plain text. Paragraphs and line breaks are preserved.</p>
+          <textarea id="content" name="content" rows="16" maxlength="50000" required aria-describedby="content-help"><%= version.content || '' %></textarea>
+        </div>
+        <div class="editor-columns">
+          <div class="form-group"><label for="imageUrl">Image URL (optional)</label>
+            <input id="imageUrl" name="imageUrl" type="url" maxlength="2048" placeholder="https://example.com/photo.jpg" value="<%= version.imageUrl || '' %>">
+          </div>
+          <div class="form-group"><label for="category">Category</label>
+            <input id="category" name="category" maxlength="80" required value="<%= version.category || '' %>">
+          </div>
+        </div>
+      </fieldset>
+      <div class="editor-actions">
+        <p id="save-message" role="status" aria-live="polite"><%= pending ? 'Submitted for review' : 'Changes save automatically as you write.' %></p>
+        <button id="submit-article" class="primary-button" type="submit" <%= pending ? 'disabled' : '' %>>Submit for approval</button>
+      </div>
+      <p id="submit-message" role="status" aria-live="polite"></p>
+    </form>
+  </main>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= pageTitle %> | The Daily Web</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/reporter.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-content">
+      <a href="/" class="logo">The Daily Web</a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="/">Public site</a>
+        <form method="POST" action="/logout"><button class="text-button">Sign out</button></form>
+      </nav>
+    </div>
+  </header>
+  <main class="container newsroom">
+    <div class="workspace-heading">
+      <div><p class="section-label">NEWSROOM</p><h1>Your articles</h1>
+        <p>Write, revise, and send your stories to the editor.</p>
+      </div>
+      <a class="primary-button" href="/reporter/articles/new">New article</a>
+    </div>
+    <% if (articles.length === 0) { %>
+      <section class="workspace-card empty-state">
+        <h2>Your next story starts here</h2><p>Create an article. Your draft saves as you write.</p>
+      </section>
+    <% } %>
+    <div class="story-list">
+      <% articles.forEach(article => { %>
+        <article class="workspace-card story-row">
+          <div>
+            <span class="status-badge status-<%= article.status %>"><%= article.status %></span>
+            <h2><%= article.workingVersion.title || 'Untitled draft' %></h2>
+            <p class="story-date">Updated <time datetime="<%= article.updatedAt.toISOString() %>"><%= article.updatedAt.toLocaleString('en-GB') %></time></p>
+            <% if (article.publishedVersion) { %>
+              <p class="publication-note">An approved version is public. <a href="/articles/<%= article._id %>">View article</a></p>
+            <% } %>
+            <% if (article.status === 'returned' && article.editorNote) { %>
+              <p class="editor-note"><strong>Editor note:</strong> <%= article.editorNote %></p>
+            <% } %>
+          </div>
+          <a class="secondary-button" href="/reporter/articles/<%= article._id %>/edit"><%= article.status === 'pending' ? 'View submission' : 'Edit article' %></a>
+        </article>
+      <% }) %>
+    </div>
+  </main>
+</body>
+</html>
