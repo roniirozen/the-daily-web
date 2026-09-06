@@ -1,0 +1,214 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title><%= article.publishedVersion.title %> | The Daily Web</title>
+
+  <meta
+    name="description"
+    content="<%= article.publishedVersion.summary %>"
+  >
+
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+
+<body>
+
+  <header class="site-header">
+    <div class="container header-content">
+
+      <a href="/" class="logo">
+        The Daily Web
+      </a>
+
+      <nav class="main-nav">
+        <a href="/">Home</a>
+        <a href="/login">Reporter / Editor Login</a>
+      </nav>
+
+    </div>
+  </header>
+
+  <main class="article-page">
+
+    <article class="container article-detail">
+
+      <a href="/" class="back-link">
+        ← Back to news
+      </a>
+
+      <header class="article-detail-header">
+
+        <p class="article-category">
+          <%= article.publishedVersion.category %>
+        </p>
+
+        <h1>
+          <%= article.publishedVersion.title %>
+        </h1>
+
+        <p class="article-summary">
+          <%= article.publishedVersion.summary %>
+        </p>
+
+        <div class="article-byline">
+
+          <span>
+            By <%= article.reporter.username %>
+          </span>
+
+          <span>
+            <%= new Date(article.publishedAt).toLocaleDateString('en-GB') %>
+          </span>
+
+        </div>
+
+      </header>
+
+      <% if (article.publishedVersion.imageUrl) { %>
+
+        <img
+          class="article-main-image"
+          src="<%= article.publishedVersion.imageUrl %>"
+          alt="<%= article.publishedVersion.title %>"
+        >
+
+      <% } %>
+
+      <section class="article-body">
+        <%- article.publishedVersion.content %>
+      </section>
+
+    </article>
+
+
+    <section class="comments-section">
+
+      <div class="container comments-container">
+
+        <div class="section-heading">
+          <div>
+            <p class="section-label">DISCUSSION</p>
+            <h2>Comments</h2>
+          </div>
+        </div>
+
+        <div id="comments-list">
+
+          <% if (comments && comments.length > 0) { %>
+
+            <% comments.forEach(comment => { %>
+
+              <article
+                class="comment"
+                data-comment-id="<%= comment._id %>"
+              >
+
+                <div class="comment-header">
+
+                  <strong>
+                    <%= comment.authorName %>
+                  </strong>
+
+                  <time>
+                    <%= new Date(comment.createdAt).toLocaleString('en-GB') %>
+                  </time>
+
+                </div>
+
+                <p>
+                  <%= comment.content %>
+                </p>
+
+              </article>
+
+            <% }) %>
+
+          <% } else { %>
+
+            <p
+              id="no-comments-message"
+              class="empty-message"
+            >
+              No comments yet. Be the first to join the discussion.
+            </p>
+
+          <% } %>
+
+        </div>
+
+
+        <form
+          id="comment-form"
+          class="comment-form"
+          data-article-id="<%= article._id %>"
+        >
+
+          <div class="form-group">
+
+            <label for="authorName">
+              Name
+            </label>
+
+            <input
+              id="authorName"
+              name="authorName"
+              type="text"
+              maxlength="60"
+              required
+            >
+
+          </div>
+
+          <div class="form-group">
+
+            <label for="content">
+              Comment
+            </label>
+
+            <textarea
+              id="content"
+              name="content"
+              rows="5"
+              maxlength="1000"
+              required
+            ></textarea>
+
+          </div>
+
+          <button type="submit" class="primary-button">
+            Post Comment
+          </button>
+
+          <p
+            id="comment-message"
+            class="form-message"
+            aria-live="polite"
+          ></p>
+
+        </form>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2026 The Daily Web</p>
+    </div>
+  </footer>
+
+  <script src="/js/comments.js" defer></script>
+
+</body>
+</html>
