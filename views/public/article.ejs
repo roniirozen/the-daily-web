@@ -61,11 +61,11 @@
         <div class="article-byline">
 
           <span>
-            By <%= article.reporter.username %>
+            By <%= article.reporter ? article.reporter.username : 'The Daily Web' %>
           </span>
 
           <span>
-            <%= new Date(article.publishedAt).toLocaleDateString('en-GB') %>
+            <%= article.publishedAt ? new Date(article.publishedAt).toLocaleDateString('en-GB') : 'Publication date unavailable' %>
           </span>
 
         </div>

@@ -15,7 +15,7 @@ Final project for the Web Applications Development course.
 
 ## Current stage
 
-This repository currently contains the shared MVC foundation only. Feature development is intentionally split into separate Git branches and Pull Requests.
+Authentication, reporter drafting/submission, and public approved article pages are integrated. Editor approval, the live feed, comments backend, analytics, and weather remain future work.
 
 ## Run locally
 
@@ -39,3 +39,25 @@ This repository currently contains the shared MVC foundation only. Feature devel
 - `services/` - application services and external integrations
 - `utils/` - shared utilities
 - `scripts/` - seed/demo scripts
+
+## Publication and workflow contract
+
+Article content is plain text. Reporters edit only workingVersion. Only the
+future editor approval operation may replace publishedVersion and set publishedAt.
+
+Public visibility depends on an approved snapshot existing, not workflow status:
+
+    { publishedVersion: { $exists: true, $ne: null } }
+
+Student 5's feed queries must use this rule too. Editing an approved article
+moves its workflow from published to draft; draft, pending, and returned articles
+can still have a public approved snapshot. Never render workingVersion publicly.
+
+The public endpoint is GET /articles/:id. It selects only the approved snapshot,
+reporter username, and publication date. Comments are an empty array until the
+comments backend is implemented.
+
+Reporter autosave and submission use conditional updates with ownership, current
+status, and the Mongoose __v revision. Both increment __v. Future editor writes
+must also check the expected status/revision and increment __v so that stale
+reporter requests cannot overwrite a newer workflow decision.

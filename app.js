@@ -2,6 +2,7 @@ const path = require('path');
 const express = require('express');
 const connectDB = require('./config/db');
 const indexRoutes = require('./routes');
+const publicRoutes = require('./routes/publicRoutes');
 const authRoutes = require('./routes/authRoutes');
 const reporterRoutes = require('./routes/reporterRoutes');
 const { loadCurrentUser } = require('./middleware/authMiddleware');
@@ -18,6 +19,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(loadCurrentUser);
 app.use('/', indexRoutes);
+app.use('/', publicRoutes);
 app.use('/', authRoutes);
 app.use('/reporter', reporterRoutes);
 
