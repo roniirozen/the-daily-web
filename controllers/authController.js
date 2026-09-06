@@ -12,6 +12,11 @@ const {
   readCookie
 } = require('../utils/sessionToken');
 
+// Fixed dummy values are not an account. They make unknown usernames perform
+// the same scrypt derivation as an incorrect password for an existing user.
+const DUMMY_PASSWORD_SALT = '00000000000000000000000000000000';
+const DUMMY_PASSWORD_HASH = '0'.repeat(128);
+
 const SESSION_DURATION_MS =
   7 * 24 * 60 * 60 * 1000;
 
@@ -33,12 +38,12 @@ exports.getLogin = (req, res) => {
 exports.login = async (req, res, next) => {
   try {
     const username =
-      String(req.body.username || '')
+      String(req.body?.username || '')
         .trim()
         .toLowerCase();
 
     const password =
-      String(req.body.password || '');
+      String(req.body?.password || '');
 
     if (!username || !password) {
       return res.status(400).render(
@@ -55,25 +60,13 @@ exports.login = async (req, res, next) => {
       username
     });
 
-    if (!user) {
-      return res.status(401).render(
-        'auth/login',
-        {
-          pageTitle: 'Login',
-          errorMessage:
-            'Invalid username or password.'
-        }
-      );
-    }
+    const passwordIsValid = await verifyPassword(
+      password,
+      user ? user.passwordSalt : DUMMY_PASSWORD_SALT,
+      user ? user.passwordHash : DUMMY_PASSWORD_HASH
+    );
 
-    const passwordIsValid =
-      await verifyPassword(
-        password,
-        user.passwordSalt,
-        user.passwordHash
-      );
-
-    if (!passwordIsValid) {
+    if (!user || !passwordIsValid) {
       return res.status(401).render(
         'auth/login',
         {

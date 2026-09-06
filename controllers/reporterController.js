@@ -1,4 +1,5 @@
 const Article = require('../models/Article');
+const { validateArticleInput } = require('../utils/articleValidation');
 
 function getReporterId(req) {
   return req.session?.user?.id || null;
@@ -12,13 +13,34 @@ exports.getDashboard = async (req, res, next) => {
       return res.status(401).send('Authentication required');
     }
 
-    const articles = await Article.find({
-      reporter: reporterId
-    }).sort({ updatedAt: -1 });
+    const pageSize = 20;
+    const requestedPage = req.query.page === undefined ? 1 : Number(req.query.page);
+    if (
+      (req.query.page !== undefined &&
+        (typeof req.query.page !== 'string' || !/^[1-9]\d*$/.test(req.query.page))) ||
+      !Number.isSafeInteger(requestedPage) || requestedPage < 1
+    ) {
+      return res.status(400).send('Invalid page number');
+    }
+
+    const filter = { reporter: reporterId };
+    const total = await Article.countDocuments(filter);
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const page = Math.min(requestedPage, totalPages);
+    const articles = await Article.find(filter)
+      // The title is enough to indicate an approved snapshot exists.
+      .select('workingVersion.title status updatedAt editorNote publishedVersion.title')
+      .sort({ updatedAt: -1, _id: -1 })
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
+      .lean();
 
     res.render('reporter/dashboard', {
       pageTitle: 'Reporter Dashboard',
-      articles
+      articles,
+      page,
+      totalPages,
+      total
     });
   } catch (error) {
     next(error);
@@ -42,16 +64,13 @@ exports.createArticle = async (req, res, next) => {
       });
     }
 
+    const input = validateArticleInput(req.body);
+    if (input.error) {
+      return res.status(400).json({ message: input.error });
+    }
     const article = await Article.create({
       reporter: reporterId,
-
-      workingVersion: {
-        title: req.body.title || '',
-        summary: req.body.summary || '',
-        content: req.body.content || '',
-        imageUrl: req.body.imageUrl || '',
-        category: req.body.category || ''
-      },
+      workingVersion: input.fields,
 
       status: 'draft',
       lastAutosavedAt: new Date()
@@ -95,52 +114,60 @@ exports.getEditArticle = async (req, res, next) => {
 exports.autosaveArticle = async (req, res, next) => {
   try {
     const reporterId = getReporterId(req);
-
     if (!reporterId) {
-      return res.status(401).json({
-        message: 'Authentication required'
-      });
+      return res.status(401).json({ message: 'Authentication required' });
     }
 
     const article = await Article.findOne({
       _id: req.params.id,
       reporter: reporterId
     });
-
     if (!article) {
-      return res.status(404).json({
-        message: 'Article not found'
-      });
+      return res.status(404).json({ message: 'Article not found' });
     }
-
-    if (article.status === 'pending') {
+    if (!['draft', 'returned', 'published'].includes(article.status)) {
       return res.status(409).json({
         message: 'An article waiting for editor approval cannot be edited'
       });
     }
 
-    article.workingVersion.title = req.body.title ?? '';
-    article.workingVersion.summary = req.body.summary ?? '';
-    article.workingVersion.content = req.body.content ?? '';
-    article.workingVersion.imageUrl = req.body.imageUrl ?? '';
-    article.workingVersion.category = req.body.category ?? '';
-
-    /*
-      Editing a previously published article starts a new working draft.
-      publishedVersion remains unchanged, so readers still see
-      the last editor-approved version.
-    */
-    if (article.status === 'published') {
-      article.status = 'draft';
+    const input = validateArticleInput(req.body);
+    if (input.error) {
+      return res.status(400).json({ message: input.error });
+    }
+    const versionChanges = {};
+    for (const [name, value] of Object.entries(input.fields)) {
+      versionChanges['workingVersion.' + name] = value;
     }
 
-    article.lastAutosavedAt = new Date();
-
-    await article.save();
-
+    // Check the revision and status again in MongoDB, not just in this request.
+    // Neither operation writes to publishedVersion.
+    const updated = await Article.findOneAndUpdate(
+      {
+        _id: article._id,
+        reporter: reporterId,
+        status: article.status,
+        __v: article.__v
+      },
+      {
+        $set: {
+          ...versionChanges,
+          status: article.status === 'published' ? 'draft' : article.status,
+          lastAutosavedAt: new Date()
+        },
+        $inc: { __v: 1 }
+      },
+      { new: true, runValidators: true }
+    );
+    if (!updated) {
+      return res.status(409).json({
+        message: 'Article changed while saving. Reload before continuing.'
+      });
+    }
     res.json({
       message: 'Draft saved',
-      savedAt: article.lastAutosavedAt
+      status: updated.status,
+      savedAt: updated.lastAutosavedAt
     });
   } catch (error) {
     next(error);
@@ -150,51 +177,48 @@ exports.autosaveArticle = async (req, res, next) => {
 exports.submitForReview = async (req, res, next) => {
   try {
     const reporterId = getReporterId(req);
-
     if (!reporterId) {
-      return res.status(401).json({
-        message: 'Authentication required'
-      });
+      return res.status(401).json({ message: 'Authentication required' });
     }
 
     const article = await Article.findOne({
       _id: req.params.id,
       reporter: reporterId
     });
-
     if (!article) {
-      return res.status(404).json({
-        message: 'Article not found'
-      });
+      return res.status(404).json({ message: 'Article not found' });
     }
-
     if (!['draft', 'returned'].includes(article.status)) {
       return res.status(409).json({
         message: 'This article cannot be submitted in its current status'
       });
     }
 
-    const version = article.workingVersion;
-
-    if (
-      !version.title.trim() ||
-      !version.summary.trim() ||
-      !version.content.trim() ||
-      !version.category.trim()
-    ) {
-      return res.status(400).json({
-        message: 'Title, summary, content and category are required'
-      });
+    const input = validateArticleInput(article.workingVersion?.toObject(), true);
+    if (input.error) {
+      return res.status(400).json({ message: input.error });
     }
 
-    article.status = 'pending';
-    article.editorNote = '';
-
-    await article.save();
-
-    res.json({
-      message: 'Article submitted for editor approval'
-    });
+    // Only submit the exact revision whose publication fields were validated.
+    const updated = await Article.findOneAndUpdate(
+      {
+        _id: article._id,
+        reporter: reporterId,
+        status: article.status,
+        __v: article.__v
+      },
+      {
+        $set: { status: 'pending', editorNote: '' },
+        $inc: { __v: 1 }
+      },
+      { new: true, runValidators: true }
+    );
+    if (!updated) {
+      return res.status(409).json({
+        message: 'Article changed while submitting. Review it and try again.'
+      });
+    }
+    res.json({ message: 'Article submitted for editor approval' });
   } catch (error) {
     next(error);
   }

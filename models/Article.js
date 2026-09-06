@@ -83,6 +83,7 @@ const articleSchema = new mongoose.Schema(
 );
 
 articleSchema.index({ reporter: 1, status: 1 });
+articleSchema.index({ reporter: 1, updatedAt: -1, _id: -1 });
 articleSchema.index({ publishedAt: -1 });
 
 module.exports = mongoose.model('Article', articleSchema);
