@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Login | The Daily Web</title>
+
+  <link
+    rel="stylesheet"
+    href="/css/main.css"
+  >
+
+  <link
+    rel="stylesheet"
+    href="/css/auth.css"
+  >
+</head>
+
+<body>
+
+  <header class="site-header">
+
+    <div class="container header-content">
+
+      <a href="/" class="logo">
+        The Daily Web
+      </a>
+
+      <nav class="main-nav">
+        <a href="/">Home</a>
+      </nav>
+
+    </div>
+
+  </header>
+
+
+  <main class="auth-page">
+
+    <section class="auth-card">
+
+      <p class="auth-label">
+        STAFF ACCESS
+      </p>
+
+      <h1>Welcome back</h1>
+
+      <p class="auth-description">
+        Sign in to access your newsroom workspace.
+      </p>
+
+
+      <% if (errorMessage) { %>
+
+        <div
+          class="auth-error"
+          role="alert"
+        >
+          <%= errorMessage %>
+        </div>
+
+      <% } %>
+
+
+      <form
+        method="POST"
+        action="/login"
+        class="auth-form"
+      >
+
+        <div class="auth-field">
+
+          <label for="username">
+            Username
+          </label>
+
+          <input
+            id="username"
+            name="username"
+            type="text"
+            autocomplete="username"
+            required
+          >
+
+        </div>
+
+
+        <div class="auth-field">
+
+          <label for="password">
+            Password
+          </label>
+
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+          >
+
+        </div>
+
+
+        <button
+          type="submit"
+          class="auth-button"
+        >
+          Sign in
+        </button>
+
+      </form>
+
+    </section>
+
+  </main>
+
+</body>
+</html>
