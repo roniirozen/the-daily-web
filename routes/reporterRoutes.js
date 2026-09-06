@@ -1,7 +1,11 @@
-const express = require('express');
+﻿const express = require('express');
 const reporterController = require('../controllers/reporterController');
 
+const { requireAuthentication, requireRole } = require('../middleware/authMiddleware');
+
 const router = express.Router();
+
+router.use(requireAuthentication, requireRole('reporter'));
 
 router.get('/', reporterController.getDashboard);
 
@@ -22,3 +26,4 @@ router.post(
 );
 
 module.exports = router;
+

@@ -1,28 +1,11 @@
-const express = require('express');
-
-const authController =
-  require('../controllers/authController');
-
-const {
-  loadCurrentUser
-} = require('../middleware/authMiddleware');
+﻿const express = require('express');
+const authController = require('../controllers/authController');
 
 const router = express.Router();
 
-router.get(
-  '/login',
-  loadCurrentUser,
-  authController.getLogin
-);
-
-router.post(
-  '/login',
-  authController.login
-);
-
-router.post(
-  '/logout',
-  authController.logout
-);
+// app.js loads the database-backed user once before mounting this router.
+router.get('/login', authController.getLogin);
+router.post('/login', authController.login);
+router.post('/logout', authController.logout);
 
 module.exports = router;

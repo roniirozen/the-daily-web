@@ -1,7 +1,10 @@
-const path = require('path');
+﻿const path = require('path');
 const express = require('express');
 const connectDB = require('./config/db');
 const indexRoutes = require('./routes');
+const authRoutes = require('./routes/authRoutes');
+const reporterRoutes = require('./routes/reporterRoutes');
+const { loadCurrentUser } = require('./middleware/authMiddleware');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,7 +16,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use(loadCurrentUser);
 app.use('/', indexRoutes);
+app.use('/', authRoutes);
+app.use('/reporter', reporterRoutes);
 
 app.use((req, res) => {
   res.status(404).send('Page not found');
@@ -32,3 +38,4 @@ async function startServer() {
 }
 
 startServer();
+
