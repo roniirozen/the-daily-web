@@ -72,6 +72,23 @@ const articleSchema = new mongoose.Schema(
       default: null
     },
 
+    publicationHistory: {
+      type: [new mongoose.Schema({
+        approvedAt: { type: Date, required: true },
+        editor: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          required: true
+        },
+        type: {
+          type: String,
+          enum: ['initial', 'update'],
+          required: true
+        }
+      }, { _id: false })],
+      default: () => []
+    },
+
     lastAutosavedAt: {
       type: Date,
       default: Date.now
