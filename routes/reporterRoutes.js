@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const reporterController = require('../controllers/reporterController');
 
 const { requireAuthentication, requireRole } = require('../middleware/authMiddleware');
@@ -6,6 +6,14 @@ const { requireAuthentication, requireRole } = require('../middleware/authMiddle
 const router = express.Router();
 
 router.use(requireAuthentication, requireRole('reporter'));
+
+// Reject malformed IDs before any controller sends them to Mongoose.
+router.param('id', (req, res, next, id) => {
+  if (!/^[a-fA-F0-9]{24}$/.test(id)) {
+    return res.status(400).json({ message: 'Invalid article ID' });
+  }
+  next();
+});
 
 router.get('/', reporterController.getDashboard);
 
@@ -26,4 +34,3 @@ router.post(
 );
 
 module.exports = router;
-

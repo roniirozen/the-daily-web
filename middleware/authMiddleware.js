@@ -54,6 +54,9 @@ async function loadCurrentUser(req, res, next) {
 
 function requireAuthentication(req, res, next) {
   if (!req.currentUser) {
+    if (req.method !== 'GET') {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
     return res.redirect('/login');
   }
 
