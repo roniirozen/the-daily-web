@@ -6,8 +6,9 @@ const Session = require('../models/Session');
 const User = require('../models/User');
 const ViewStat = require('../models/ViewStat');
 const { hashPassword } = require('../utils/password');
+const logger = require('../utils/logger');
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/web-daily';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/web-daily-demo';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
 const NOW = new Date();
@@ -357,9 +358,9 @@ async function insertInBatches(Model, documents, batchSize = 4000) {
 }
 
 function printCredentials() {
-  console.log('\nDEMO CREDENTIALS — fake local accounts only');
+  console.log('\nDEMO ACCOUNTS — fake local accounts only; demo-only passwords are documented in README');
   for (const user of DEMO_USERS) {
-    console.log(`  ${user.role.toUpperCase()}: ${user.username} / ${user.password}`);
+    console.log(`  ${user.role.toUpperCase()}: ${user.username}`);
   }
 }
 
@@ -370,10 +371,21 @@ async function seedDemoData() {
     );
   }
 
+  const databaseName = decodeURIComponent(MONGO_URI.match(/^mongodb(?:\+srv)?:\/\/[^/]+\/([^?]+)(?:\?|$)/)?.[1] || '');
+  if (!/^(web-daily-demo(?:-[a-z0-9]+)?|daily_web_test_[a-f0-9]+)$/.test(databaseName)) {
+    throw new Error('Use a web-daily-demo database (or an isolated daily_web_test_ database).');
+  }
+
   await mongoose.connect(MONGO_URI);
   console.log(`Connected to MongoDB database: ${mongoose.connection.name}`);
 
   try {
+    // Both explicit opt-in and an unmistakably disposable database name are
+    // required before removing any demo-owned records. Never seed production.
+    if (!/^(web-daily-demo(?:-[a-z0-9]+)?|daily_web_test_[a-f0-9]+)$/.test(mongoose.connection.name)) {
+      throw new Error('Use a web-daily-demo database (or an isolated daily_web_test_ database).');
+    }
+    await Promise.all([User, Article, Comment, Session, ViewStat].map(Model => Model.init()));
     await removePreviousDemoData();
     const users = await createDemoUsers();
     const reporters = users.filter(user => user.role === 'reporter');
@@ -427,6 +439,6 @@ async function seedDemoData() {
 }
 
 seedDemoData().catch(error => {
-  console.error(`Seed failed: ${error.message}`);
+  logger.error('Demo seed failed; check DEMO_SEED and the demo database name', { error });
   process.exitCode = 1;
 });
