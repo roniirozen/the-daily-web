@@ -1,6 +1,7 @@
 const path = require('path');
 const express = require('express');
 const connectDB = require('./config/db');
+const logger = require('./utils/logger');
 const indexRoutes = require('./routes');
 const publicRoutes = require('./routes/publicRoutes');
 const authRoutes = require('./routes/authRoutes');
@@ -36,6 +37,7 @@ app.use((req, res) => {
 });
 
 app.use((error, req, res, next) => {
+  logger.error('Request failed', { error, method: req.method });
   if (error.type === 'entity.too.large') {
     return res.status(413).json({ message: 'Request body is too large' });
   }
@@ -43,14 +45,14 @@ app.use((error, req, res, next) => {
       error.name === 'CastError') {
     return res.status(400).json({ message: 'Invalid request input' });
   }
-  console.error(error);
   res.status(500).send('Internal server error');
 });
 
 async function startServer() {
+  logger.info('Application starting', { port: PORT });
   await connectDB();
   app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    logger.info('HTTP server listening', { port: PORT });
   });
 }
 

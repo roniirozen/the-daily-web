@@ -27,6 +27,30 @@ Authentication, reporter drafting/submission, and public approved article pages 
 4. Open:
    http://localhost:3000
 
+## Environment and operational logging
+
+Set `MONGO_URI` for MongoDB (default `mongodb://127.0.0.1:27017/web-daily`)
+and `PORT` for HTTP (default `3000`) in the process environment. Set
+`NODE_ENV=production` when deploying; production session cookies require HTTPS.
+The application does not automatically load `.env` files.
+
+`utils/logger.js` uses built-in Node modules to write one JSON record per line
+to the console and `logs/YYYY-MM-DD.log` (UTC dates). Each entry has a timestamp,
+level and fixed event message, with optional operational metadata. It records
+startup, database connections/failures, request errors, login outcomes, logout
+and authentication/authorization failures. The runtime `logs/` folder, local
+environment files and `node_modules/` are ignored by Git.
+
+Use only fixed messages and safe metadata (`method`, route templates, `status`,
+`userId`, `role`, `reason`, `port`, and an `Error`). Do not pass bodies, cookies,
+headers, query strings, passwords, session tokens or environment values. Error
+messages and nested causes are omitted because they may contain secrets;
+development logs include stack locations, while production logs keep only
+the error name/code. Writes are synchronous for this small application; if
+file logging fails, the logger reports it to the console and requests continue.
+The process needs write access to `logs/`; archive or remove old daily files
+as part of deployment maintenance.
+
 ## Project structure
 
 - `config/` - configuration and database connection
