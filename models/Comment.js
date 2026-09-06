@@ -41,7 +41,7 @@ const commentSchema = new mongoose.Schema(
   }
 );
 
-commentSchema.index({ article: 1, createdAt: -1 });
+commentSchema.index({ article: 1, createdAt: -1, _id: -1 });
 commentSchema.index({ deviceFingerprint: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Comment', commentSchema);

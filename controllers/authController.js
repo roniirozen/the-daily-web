@@ -38,6 +38,13 @@ exports.getLogin = (req, res) => {
 
 exports.login = async (req, res, next) => {
   try {
+    if (typeof req.body?.username !== 'string' || typeof req.body?.password !== 'string' ||
+        req.body.username.length > 60 || req.body.password.length > 128) {
+      logger.warn('Login failed', { reason: 'invalid_credential_input' });
+      return res.status(400).render('auth/login', {
+        pageTitle: 'Login', errorMessage: 'Enter a valid username and password.'
+      });
+    }
     const username =
       String(req.body?.username || '')
         .trim()

@@ -70,7 +70,7 @@
           <form action="<%= base %>/return" method="post">
             <input type="hidden" name="revision" value="<%= revision %>">
             <label for="editorNote">Required note for the reporter</label>
-            <textarea id="editorNote" name="editorNote" rows="4" required placeholder="Explain the corrections needed before publication."></textarea>
+            <textarea id="editorNote" name="editorNote" rows="4" maxlength="2000" required placeholder="Explain the corrections needed before publication."></textarea>
             <button class="secondary" type="submit">Return for corrections</button>
           </form>
         </div>

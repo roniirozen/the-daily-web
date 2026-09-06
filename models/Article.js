@@ -110,9 +110,12 @@ const articleSchema = new mongoose.Schema(
 
 articleSchema.index({ reporter: 1, status: 1 });
 articleSchema.index({ reporter: 1, updatedAt: -1, _id: -1 });
-articleSchema.index({ publishedAt: -1 });
+articleSchema.index({ publishedAt: -1, _id: -1 });
+articleSchema.index({ updatedAt: -1, _id: -1 });
+articleSchema.index({ status: 1, updatedAt: -1, _id: -1 });
 articleSchema.index({ totalViews: -1, _id: -1 });
-articleSchema.index({ 'publishedVersion.category': 1, publishedAt: -1 });
+articleSchema.index({ 'publishedVersion.category': 1, publishedAt: -1, _id: -1 });
+articleSchema.index({ 'publishedVersion.category': 1, totalViews: -1, _id: -1 });
 articleSchema.index({ 'publishedVersion.title': 'text', 'publishedVersion.summary': 'text' });
 
 module.exports = mongoose.model('Article', articleSchema);

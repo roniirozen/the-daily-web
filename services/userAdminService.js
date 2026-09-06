@@ -3,8 +3,22 @@ const User = require('../models/User');
 const Session = require('../models/Session');
 const Article = require('../models/Article');
 const { hashPassword } = require('../utils/password');
+const logger = require('../utils/logger');
 
 const publicFields = '_id username role createdAt updatedAt';
+let pendingAccountChange = Promise.resolve();
+
+// Account administration is infrequent. Serialize changes in this server so
+// two Editors cannot simultaneously demote/delete one another after both
+// observed the old role count. Recheck the actor after acquiring the queue.
+function changeAccount(actorId, operation) {
+  const result = pendingAccountChange.catch(() => {}).then(async () => {
+    if (!await User.exists({ _id: actorId, role: 'editor' })) fail(403, 'Editor permission is required.');
+    return operation();
+  });
+  pendingAccountChange = result;
+  return result;
+}
 
 function fail(status, message) {
   const error = new Error(message);
@@ -38,8 +52,7 @@ async function protectEditor(user, actorId, removingEditor) {
   if (String(user._id) === String(actorId)) {
     fail(409, 'You cannot delete or demote your own active account.');
   }
-  // This guard protects normal administration. A count across documents is
-  // not a transaction; concurrent administration needs integration testing.
+  // Administrative mutations in this Node process use the same queue.
   if (user.role === 'editor' && await User.countDocuments({ role: 'editor' }) <= 1) {
     fail(409, 'The last remaining Editor cannot be deleted or demoted.');
   }
@@ -76,10 +89,11 @@ exports.createUser = async (body) => {
   const input = validateInput(body, true);
   const user = await User.create({ username: input.username, role: input.role,
     ...await passwordFields(input.password) });
+  logger.info('Editor created user', { userId: user._id.toString(), role: user.role });
   return user._id;
 };
 
-exports.updateUser = async (id, body, actorId) => {
+exports.updateUser = (id, body, actorId) => changeAccount(actorId, async () => {
   const input = validateInput(body, false);
   const user = await getUser(id);
   await protectEditor(user, actorId, user.role === 'editor' && input.role !== 'editor');
@@ -91,10 +105,11 @@ exports.updateUser = async (id, body, actorId) => {
   const updated = await User.findOneAndUpdate({ _id: id, updatedAt: user.updatedAt },
     { $set: changes }, { new: true, runValidators: true }).select(publicFields).lean();
   if (!updated) fail(409, 'This account changed. Reload before saving.');
+  logger.info('Editor updated user', { userId: String(id), role: updated.role });
   return updated;
-};
+});
 
-exports.deleteUser = async (id, body, actorId) => {
+exports.deleteUser = (id, body, actorId) => changeAccount(actorId, async () => {
   const user = await getUser(id);
   await protectEditor(user, actorId, true);
   if (body?.confirmation !== user.username) fail(400, 'Type the exact username to confirm deletion.');
@@ -105,4 +120,5 @@ exports.deleteUser = async (id, body, actorId) => {
   await Session.deleteMany({ user: user._id });
   const result = await User.deleteOne({ _id: id, updatedAt: user.updatedAt });
   if (!result.deletedCount) fail(409, 'This account changed. Reload before deleting.');
-};
+  logger.info('Editor deleted user', { userId: String(id) });
+});
