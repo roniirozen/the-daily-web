@@ -8,6 +8,7 @@ const User = require('../models/User');
 const Article = require('../models/Article');
 const Session = require('../models/Session');
 const ViewStat = require('../models/ViewStat');
+const Comment = require('../models/Comment');
 const { hashSessionToken } = require('../utils/sessionToken');
 const { openBrowser } = require('./helpers/browser');
 
@@ -30,6 +31,7 @@ test('real browser: feed races, infinite scrolling, comments, autosave and respo
     const publishedAt = new Date(Date.now() - (i + 1) * 3600000);
     return { reporter: reporter._id, workingVersion: version, publishedVersion: version, publishedAt, status: 'published', publicationHistory: [{ editor: editor._id, type: 'initial', approvedAt: publishedAt }] };
   }));
+  await Comment.insertMany(Array.from({ length: 55 }, (_, i) => ({ article: articles[0]._id, authorName: 'Reader', content: 'Historical comment ' + i, deviceFingerprint: '0'.repeat(64) })));
   server = app.listen(0, '127.0.0.1'); await once(server, 'listening');
   const base = 'http://127.0.0.1:' + server.address().port;
   browser = await openBrowser();
@@ -68,6 +70,8 @@ test('real browser: feed races, infinite scrolling, comments, autosave and respo
   assert.equal(await browser.evaluate('document.querySelectorAll(".comment").length'), before + 1);
   assert.equal(await browser.evaluate('document.querySelectorAll(".comment img").length'), 0);
   assert.equal(await browser.evaluate('window.__requests.filter(url => url.includes("/comments")).length'), 1);
+  await browser.evaluate('document.querySelector("#more-comments").click()');
+  await browser.waitFor('document.querySelectorAll(".comment").length === 56');
 
   async function loginAs(user) {
     const token = randomBytes(32).toString('hex');
@@ -81,6 +85,9 @@ test('real browser: feed races, infinite scrolling, comments, autosave and respo
   const savedUrl = await browser.evaluate('location.href');
   await browser.navigate(savedUrl);
   assert.equal(await browser.evaluate('document.querySelector("#title").value'), 'Browser autosave draft');
+  await browser.evaluate(`for (const name of ['summary','content','category']) { const field=document.getElementById(name); field.value='Browser submitted text'; field.dispatchEvent(new Event('input', { bubbles: true })); } document.querySelector('#article-editor').requestSubmit();`);
+  await browser.waitFor('document.querySelector("#article-status").textContent === "pending"');
+  assert(await browser.evaluate('document.querySelector("#article-fields").disabled'));
   const screens = ['/', '/articles/' + articles[0]._id, '/reporter', savedUrl.slice(base.length)];
   async function assertLayout(route, width) {
     await browser.call('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: false });
@@ -95,7 +102,18 @@ test('real browser: feed races, infinite scrolling, comments, autosave and respo
   for (const width of [375, 768, 1280]) {
     for (const route of ['/editor', '/editor/articles/' + articles[0]._id, '/editor/users', '/editor/users/new', '/editor/users/' + reporter._id + '/edit', '/editor/analytics/' + articles[0]._id]) await assertLayout(route, width);
   }
+  const pendingId = savedUrl.split('/').at(-2);
+  await browser.navigate(base + '/editor/articles/' + pendingId);
+  await browser.evaluate(`document.querySelector('#title').value='Unsaved Editor changes'; document.querySelector('#title').dispatchEvent(new Event('input', {bubbles:true}));`);
+  assert(await browser.evaluate('document.querySelector("#approve-button").disabled && !document.querySelector("#unsaved-warning").hidden'));
+  await Article.updateOne({ _id: articles[0]._id }, { $set: { 'publishedVersion.title': 'W'.repeat(200), 'publishedVersion.category': 'C'.repeat(80) } });
+  await assertLayout('/articles/' + articles[0]._id, 375);
   await browser.call('Network.clearBrowserCookies');
   await assertLayout('/login', 375);
+  await browser.call('Page.addScriptToEvaluateOnNewDocument', { source: `Storage.prototype.getItem = () => { throw new Error('Storage disabled'); }; Storage.prototype.setItem = () => { throw new Error('Storage disabled'); };` });
+  await browser.navigate(base + '/articles/' + articles[0]._id);
+  assert(await browser.evaluate('document.querySelector(".article-body").textContent.includes("Full server-rendered body")'));
+  await browser.navigate(base);
+  await browser.waitFor('document.querySelectorAll(".article-card").length === 20');
   assert.equal(browser.events.filter(event => event.method === 'Runtime.exceptionThrown').length, 0);
 });

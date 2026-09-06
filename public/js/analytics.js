@@ -44,11 +44,11 @@
 
     const times = timeline.map(point => new Date(point.bucketStart).getTime())
       .concat(publicationHistory.map(event => new Date(event.approvedAt).getTime()));
-    const minTime = Math.min(...times);
-    const maxTime = Math.max(...times);
+    const minTime = times.reduce((min, time) => Math.min(min, time), Infinity);
+    const maxTime = times.reduce((max, time) => Math.max(max, time), -Infinity);
     const timeSpan = Math.max(maxTime - minTime, 60 * 60 * 1000);
 
-    const maxViews = Math.max(...timeline.map(point => point.viewCount), 1);
+    const maxViews = timeline.reduce((max, point) => Math.max(max, point.viewCount), 1);
 
     function xForTime(time) {
       return plotLeft + ((time - minTime) / timeSpan) * plotWidth;
@@ -104,12 +104,14 @@
     // X-axis labels: first, middle, last bucket
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    [minTime, minTime + timeSpan / 2, minTime + timeSpan].forEach(time => {
+    const labels = width < 500 ? [minTime, minTime + timeSpan] : [minTime, minTime + timeSpan / 2, minTime + timeSpan];
+    labels.forEach((time, index) => {
+      ctx.textAlign = index === 0 ? 'left' : index === labels.length - 1 ? 'right' : 'center';
       ctx.fillText(formatHour(time), xForTime(time), plotBottom + 8);
     });
 
     // View bars
-    const barWidth = Math.max(plotWidth / timeline.length - 2, 2);
+    const barWidth = Math.max(1, Math.min(plotWidth / timeline.length - 2, plotWidth * 3600000 / timeSpan * 0.8));
     ctx.fillStyle = COLORS.bar;
     timeline.forEach(point => {
       const x = xForTime(new Date(point.bucketStart).getTime());
@@ -182,7 +184,15 @@
 
       if (emptyState) emptyState.hidden = true;
       if (wrapper) wrapper.hidden = false;
-      drawChart(canvas, data.timeline, data.publicationHistory || []);
+      const redraw = () => {
+        // Match drawing coordinates to the displayed width so mobile labels
+        // stay readable rather than shrinking a 960px bitmap to phone width.
+        canvas.width = Math.max(250, Math.floor(canvas.clientWidth));
+        canvas.height = 360;
+        drawChart(canvas, data.timeline, data.publicationHistory || []);
+      };
+      redraw();
+      window.addEventListener('resize', redraw);
     } catch (error) {
       if (emptyState) {
         emptyState.hidden = false;
