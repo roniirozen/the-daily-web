@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= pageTitle %> | The Daily Web</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/editor.css">
+  <link rel="stylesheet" href="/css/analytics.css">
+</head>
+<body class="editor-page">
+  <header class="masthead"><a class="brand" href="/">The Daily Web</a><span>Editorial desk</span></header>
+  <main>
+    <div class="page-heading">
+      <p class="eyebrow">Newsroom / Analytics</p>
+      <h1><%= articleTitle %></h1>
+      <p>Views over time, with every editorial approval marked on the timeline.</p>
+    </div>
+
+    <section class="panel">
+      <div class="analytics-summary">
+        <div>
+          <p class="eyebrow">Status</p>
+          <span class="badge <%= article.status %>"><%= article.status %></span>
+        </div>
+        <div>
+          <p class="eyebrow">Total views</p>
+          <p id="total-views" class="stat-number">&ndash;</p>
+        </div>
+      </div>
+
+      <div id="chart-empty" class="empty" hidden>
+        <h2>No view data yet</h2>
+        <p>Once readers view this article, its hourly view counts will appear here.</p>
+      </div>
+
+      <div id="chart-wrapper">
+        <canvas id="analytics-chart" width="960" height="360" aria-label="Article views over time, with publication events marked" role="img"></canvas>
+        <ul id="chart-legend" class="chart-legend">
+          <li><span class="legend-swatch views"></span> Views per hour</li>
+          <li><span class="legend-swatch initial"></span> Initial publication</li>
+          <li><span class="legend-swatch update"></span> Update approved</li>
+        </ul>
+      </div>
+    </section>
+
+    <p><a href="/editor/articles/<%= article._id %>">&larr; Back to review</a></p>
+  </main>
+
+  <script>
+    window.__ANALYTICS_DATA_URL__ = '/editor/analytics/<%= article._id %>/data';
+  </script>
+  <script src="/js/analytics.js"></script>
+</body>
+</html>
