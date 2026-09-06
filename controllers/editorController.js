@@ -1,25 +1,12 @@
 const mongoose = require('mongoose');
 const Article = require('../models/Article');
+const { validateArticleInput } = require('../utils/articleValidation');
 
 const statuses = ['draft', 'pending', 'published', 'returned'];
 const fields = ['title', 'summary', 'content', 'imageUrl', 'category'];
 
 function validateVersion(version) {
-  if (!version || fields.some(field => typeof version[field] !== 'string')) {
-    return 'All article fields must be text.';
-  }
-  if (['title', 'summary', 'content', 'category'].some(field => !version[field].trim())) {
-    return 'Title, summary, content and category are required.';
-  }
-  if (version.imageUrl.trim()) {
-    try {
-      const url = new URL(version.imageUrl.trim());
-      if (!['http:', 'https:'].includes(url.protocol)) throw new Error();
-    } catch {
-      return 'Image URL must be an absolute HTTP or HTTPS URL.';
-    }
-  }
-  return null;
+  return validateArticleInput(version?.toObject ? version.toObject() : version, true).error || null;
 }
 
 function handleError(error, res, next) {
