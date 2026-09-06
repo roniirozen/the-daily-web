@@ -55,6 +55,16 @@ table small { display: block; font-weight: normal; margin-top: .3rem; }
 .form-error { background: #fff0ef; border-left: 4px solid #a42d32; padding: 1rem; color: #84262b; margin-bottom: 1.5rem; overflow-wrap: anywhere; }
 .pagination { justify-content: center; margin: 1.5rem 0; }
 .account-form details form { padding-top: 1rem; }
+.version-label { font-size: .85rem; font-weight: bold; letter-spacing: .07em; padding: .65rem .8rem; border-radius: .3rem; margin-top: 0; }
+.working-label { background: #fff0cc; color: #795400; }
+.public-label { background: #dff4e8; color: #17653f; }
+.public-fields dt { font-weight: bold; color: #526174; margin-top: 1.2rem; }
+.public-fields dd { margin: .4rem 0 1.5rem; overflow-wrap: anywhere; }
+.public-title { font: bold 1.5rem Georgia, serif; }
+.approval-history { padding-left: 1.3rem; }
+.approval-history li { padding: .5rem; }
+.approval-history time { display: inline-block; margin-left: .5rem; color: #526174; }
+.editor-page button:disabled { background: #dce2e9; color: #526174; cursor: not-allowed; }
 @media (max-width: 760px) {
   .version-grid, .decision-grid { grid-template-columns: 1fr; }
   .masthead { align-items: flex-start; flex-direction: column; }

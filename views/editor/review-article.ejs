@@ -9,6 +9,7 @@
 </head>
 <body class="editor-page">
   <% const pending = article.status === 'pending'; const working = article.workingVersion || {}; const live = article.publishedVersion; const base = '/editor/articles/' + article._id; const revision = article.updatedAt.toISOString(); %>
+  <% const history = article.publicationHistory || []; const hasChanges = live && ['title', 'summary', 'category', 'content', 'imageUrl'].some(field => (working[field] || '') !== (live[field] || '')); %>
   <header class="masthead"><a class="brand" href="/">The Daily Web</a><a href="/editor">&larr; Article desk</a></header>
   <main>
     <div class="page-heading">
@@ -17,34 +18,39 @@
       <p>By <strong><%= article.reporter?.username || 'Reporter unavailable' %></strong> &middot; <span class="badge <%= article.status %>"><%= article.status %></span></p>
       <p class="muted">Last updated <time datetime="<%= revision %>"><%= article.updatedAt.toLocaleString('en-GB') %></time></p>
     </div>
-    <div class="notice"><%= live ? 'Readers continue to see the published version below. Working changes become public only after approval.' : 'This article is not public. Its first approval will publish the working version.' %></div>
+    <div class="notice"><strong><%= live ? 'A published version is live.' : 'Initial publication — not public yet.' %></strong> <%= live ? 'Readers see only CURRENTLY PUBLIC below. Approving a new version replaces that public snapshot.' : 'First approval will make this story available to readers.' %></div>
     <% if (article.editorNote) { %><aside class="panel"><h2>Editor note</h2><p class="article-text"><%= article.editorNote %></p></aside><% } %>
     <div class="version-grid">
       <section class="panel working-panel" aria-labelledby="working-heading">
-        <p class="eyebrow">Working version</p>
-        <h2 id="working-heading"><%= pending ? 'Waiting for approval' : 'Current working copy' %></h2>
+        <p class="version-label working-label"><%= pending ? (live ? 'PENDING NEW VERSION' : 'PENDING INITIAL PUBLICATION') : (hasChanges ? 'UNPUBLISHED WORKING CHANGES' : 'WORKING COPY') %></p>
+        <h2 id="working-heading"><%= pending ? (live ? 'Review this update' : 'Review first publication') : 'Current working copy' %></h2>
+        <p class="muted">Working record updated <time datetime="<%= revision %>"><%= article.updatedAt.toLocaleString('en-GB') %></time></p>
+        <% if (live && !hasChanges) { %><p class="muted">The saved article fields match the public version.</p><% } %>
         <p class="muted"><%= pending ? 'Edit this submission, then save before approving. Approval uses the saved version.' : 'Editing and review actions are available only after the reporter submits this article.' %></p>
-        <form action="<%= base %>/edit" method="post">
+        <form id="working-form" action="<%= base %>/edit" method="post">
           <input type="hidden" name="revision" value="<%= revision %>">
           <fieldset <%= pending ? '' : 'disabled' %>>
             <legend class="sr-only">Working article fields</legend>
-            <label for="title">Title</label><input id="title" name="title" value="<%= working.title || '' %>" required>
-            <label for="category">Category</label><input id="category" name="category" value="<%= working.category || '' %>" required>
-            <label for="summary">Summary</label><textarea id="summary" name="summary" rows="4" required><%= working.summary || '' %></textarea>
-            <label for="content">Content</label><textarea id="content" name="content" rows="14" required><%= working.content || '' %></textarea>
-            <label for="imageUrl">Image URL <span class="muted">(optional, HTTP or HTTPS)</span></label><input id="imageUrl" name="imageUrl" type="url" value="<%= working.imageUrl || '' %>">
+            <label for="title">Title</label><input id="title" name="title" maxlength="200" value="<%= working.title || '' %>" required>
+            <label for="category">Category</label><input id="category" name="category" maxlength="80" value="<%= working.category || '' %>" required>
+            <label for="summary">Summary</label><textarea id="summary" name="summary" maxlength="1000" rows="4" required><%= working.summary || '' %></textarea>
+            <label for="content">Content</label><textarea id="content" name="content" maxlength="50000" rows="14" required><%= working.content || '' %></textarea>
+            <label for="imageUrl">Image URL <span class="muted">(optional, HTTP or HTTPS)</span></label><input id="imageUrl" name="imageUrl" type="url" maxlength="2048" value="<%= working.imageUrl || '' %>">
             <% if (pending) { %><button type="submit">Save working version</button><% } %>
           </fieldset>
         </form>
       </section>
       <section class="panel live-panel" aria-labelledby="live-heading">
-        <p class="eyebrow">Published version</p><h2 id="live-heading">What readers currently see</h2>
+        <p class="version-label public-label"><%= live ? 'CURRENTLY PUBLIC' : 'NO PUBLIC VERSION' %></p><h2 id="live-heading">What readers currently see</h2>
         <% if (live) { %>
           <p class="badge published">Live</p>
           <% if (article.publishedAt) { %><p class="muted">Last approved <time datetime="<%= article.publishedAt.toISOString() %>"><%= article.publishedAt.toLocaleString('en-GB') %></time></p><% } %>
-          <p class="eyebrow"><%= live.category %></p><h3><%= live.title %></h3>
-          <p class="article-text summary"><%= live.summary %></p>
-          <div class="article-text"><%= live.content %></div>
+          <dl class="public-fields">
+            <dt>Title</dt><dd class="public-title"><%= live.title %></dd>
+            <dt>Category</dt><dd><%= live.category %></dd>
+            <dt>Summary</dt><dd class="article-text summary"><%= live.summary %></dd>
+            <dt>Content</dt><dd class="article-text"><%= live.content %></dd>
+          </dl>
           <% if (live.imageUrl) { %><p class="muted">Image URL: <span class="article-text"><%= live.imageUrl %></span></p><% } %>
         <% } else { %><div class="empty"><h3>No published version</h3><p>Readers cannot see this story yet.</p></div><% } %>
       </section>
@@ -55,9 +61,10 @@
         <div class="decision-grid">
           <form action="<%= base %>/approve" method="post">
             <input type="hidden" name="revision" value="<%= revision %>">
-            <h3><%= live ? 'Publish this update' : 'Publish this story' %></h3>
+            <h3><%= live ? 'Update approval' : 'Initial publication' %></h3>
             <p>Approval publishes the saved working version and records this decision in publication history. Save any field edits above first.</p>
-            <button class="approve" type="submit">Approve and publish</button>
+            <p id="unsaved-warning" class="form-error" role="status" hidden>There are unsaved field edits. Save the working version before approving.</p>
+            <button id="approve-button" class="approve" type="submit"><%= live ? 'Approve and publish update' : 'Approve initial publication' %></button>
           </form>
           <form action="<%= base %>/return" method="post">
             <input type="hidden" name="revision" value="<%= revision %>">
@@ -68,10 +75,28 @@
         </div>
       </section>
     <% } %>
+    <section class="panel" aria-labelledby="history-heading">
+      <h2 id="history-heading">Publication history</h2>
+      <% if (history.length) { %><ol class="approval-history">
+        <% history.forEach(entry => { %><li><strong><%= entry.type === 'initial' ? 'Initial publication' : 'Update approval' %></strong> <time datetime="<%= entry.approvedAt.toISOString() %>"><%= entry.approvedAt.toLocaleString('en-GB') %></time></li><% }); %>
+      </ol><% } else { %><p class="muted"><%= live ? 'No historical approval records are available for this older article.' : 'No approvals yet. The first approval will be recorded here.' %></p><% } %>
+    </section>
     <section class="panel danger-zone">
       <h2>Delete article</h2><p>Deleting permanently removes the working version, published version and publication history.</p>
       <details><summary>Show delete action</summary><form action="<%= base %>/delete" method="post"><p>This action cannot be undone.</p><button class="danger" type="submit">Permanently delete article</button></form></details>
     </section>
   </main>
+  <% if (pending) { %>
+    <script>
+      const workingForm = document.getElementById('working-form');
+      const approveButton = document.getElementById('approve-button');
+      const savedFields = new URLSearchParams(new FormData(workingForm)).toString();
+      workingForm.addEventListener('input', () => {
+        const changed = new URLSearchParams(new FormData(workingForm)).toString() !== savedFields;
+        approveButton.disabled = changed;
+        document.getElementById('unsaved-warning').hidden = !changed;
+      });
+    </script>
+  <% } %>
 </body>
 </html>
