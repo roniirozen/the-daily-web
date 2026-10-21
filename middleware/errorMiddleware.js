@@ -19,11 +19,27 @@ function errorStatus(error) {
   return Number.isInteger(status) && status >= 400 && status < 500 ? status : 500;
 }
 
-function respond(req, res, status, message) {
-  const wantsJson = req.path.startsWith('/api/') || req.is('json') ||
+function wantsJson(req) {
+  return req.path.startsWith('/api/') || Boolean(req.is('json')) ||
     req.accepts(['html', 'json']) === 'json';
-  if (wantsJson) return res.status(status).json({ message });
-  return res.status(status).type('text').send(message);
+}
+
+// Only a page on this site may be offered as the way back.
+function sameSiteReferrer(req) {
+  try {
+    const referrer = new URL(req.get('referer'));
+    return referrer.host === req.get('host') ? referrer.pathname + referrer.search : null;
+  } catch {
+    return null;
+  }
+}
+
+// API callers receive JSON. Browsers receive a styled page with a way back.
+function respond(req, res, status, message) {
+  if (wantsJson(req)) return res.status(status).json({ message });
+  return res.status(status).render('error', {
+    status, message, currentUser: req.currentUser || null, backUrl: sameSiteReferrer(req)
+  });
 }
 
 function notFound(req, res) {
@@ -66,4 +82,4 @@ function logServerResponses(req, res, next) {
   next();
 }
 
-module.exports = { notFound, errorHandler, logServerResponses };
+module.exports = { notFound, errorHandler, logServerResponses, respond, wantsJson };

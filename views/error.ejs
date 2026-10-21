@@ -1,0 +1,62 @@
+<%
+  const titles = {
+    400: 'Something in the request was not valid',
+    401: 'Please sign in to continue',
+    403: 'You do not have access to this page',
+    404: 'We could not find that page',
+    409: 'This content changed in the meantime',
+    413: 'The submitted content is too large',
+    503: 'The service is temporarily unavailable'
+  };
+  const heading = titles[status] || 'Something went wrong';
+%>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= heading %> | The Daily Web</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-content">
+      <a href="/" class="logo">The Daily Web</a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="/">Home</a>
+        <% if (currentUser) { %>
+          <a href="<%= currentUser.role === 'editor' ? '/editor' : '/reporter' %>">My workspace</a>
+        <% } else { %>
+          <a href="/login">Reporter / Editor Login</a>
+        <% } %>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container error-page">
+    <section class="error-card" aria-labelledby="error-heading">
+      <p class="section-label">ERROR <%= status %></p>
+      <h1 id="error-heading"><%= heading %></h1>
+      <p class="error-message"><%= message %></p>
+      <div class="error-actions">
+        <% if (status === 401) { %>
+          <a class="primary-button" href="/login">Sign in</a>
+        <% } else if (backUrl) { %>
+          <a class="primary-button" href="<%= backUrl %>">Return to the previous page</a>
+        <% } else { %>
+          <a class="primary-button" href="/">Back to the news</a>
+        <% } %>
+        <% if (currentUser) { %>
+          <a class="error-link" href="<%= currentUser.role === 'editor' ? '/editor' : '/reporter' %>">Go to my workspace</a>
+        <% } %>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2026 The Daily Web</p>
+    </div>
+  </footer>
+</body>
+</html>

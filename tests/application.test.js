@@ -43,7 +43,8 @@ test('release HTTP matrix against isolated MongoDB', { timeout: 120000 }, async 
     return result.response.headers.get('set-cookie')?.split(';')[0];
   }
   await request('/', 200); await request('/login', 200);
-  await request('/reporter', 302); await request('/editor', 401); await request('/editor/users', 401);
+  await request('/reporter', 302); await request('/editor', 302); await request('/editor/users', 302);
+  await request('/editor', 401, { headers: { Accept: 'application/json' } });
   await login('missing', password, 401);
   const reporterCookie = await login(reporter.username);
   const otherCookie = await login(otherReporter.username);
@@ -177,7 +178,7 @@ test('release HTTP matrix against isolated MongoDB', { timeout: 120000 }, async 
 
   await t.test('View statistics full CRUD, analytics history and article cleanup', async () => {
     const route = '/editor/analytics/' + t.articleId + '/stats';
-    await request(route, 401); await request(route, 403, { cookie: reporterCookie });
+    await request(route, 401, { headers: { Accept: 'application/json' } }); await request(route, 403, { cookie: reporterCookie });
     await request(route, 400, { cookie: editorCookie, method: 'POST', body: { bucketStart: 'invalid', viewCount: 5 } });
     const created = await request(route, 201, { cookie: editorCookie, method: 'POST', body: { bucketStart: '2025-01-01T12:00:00Z', viewCount: 10 } });
     const id = created.data.record._id;

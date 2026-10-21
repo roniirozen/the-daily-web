@@ -1,10 +1,11 @@
 const Article = require('../models/Article');
 const { getCommentPage } = require('../services/commentQueries');
+const { respond } = require('../middleware/errorMiddleware');
 
 exports.getArticle = async (req, res, next) => {
   try {
     if (!/^[a-fA-F0-9]{24}$/.test(req.params.id)) {
-      return res.status(400).send('Invalid article ID');
+      return respond(req, res, 400, 'Invalid article ID');
     }
 
     // Workflow status may be draft/pending/returned while an approved version
@@ -18,7 +19,7 @@ exports.getArticle = async (req, res, next) => {
       .lean();
 
     if (!article) {
-      return res.status(404).send('Article not found');
+      return respond(req, res, 404, 'Article not found');
     }
 
     const { comments, nextCursor } = await getCommentPage(article._id);

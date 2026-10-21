@@ -1,5 +1,6 @@
 const Session = require('../models/Session');
 const logger = require('../utils/logger');
+const { respond, wantsJson } = require('./errorMiddleware');
 
 const {
   COOKIE_NAME,
@@ -70,9 +71,11 @@ function requireRole(...allowedRoles) {
   return function checkRole(req, res, next) {
     if (!req.currentUser) {
       logger.warn('Authentication required', { method: req.method, route: req.baseUrl || '/' });
-      return res.status(401).send(
-        'Authentication required'
-      );
+      // A browser opening a protected page is sent to sign in, as in requireAuthentication.
+      if (req.method === 'GET' && !wantsJson(req)) {
+        return res.redirect('/login');
+      }
+      return respond(req, res, 401, 'Sign in with a Reporter or Editor account to continue.');
     }
 
     if (!allowedRoles.includes(req.currentUser.role)) {
@@ -80,9 +83,7 @@ function requireRole(...allowedRoles) {
         method: req.method, route: req.baseUrl || '/',
         userId: req.currentUser._id.toString(), role: req.currentUser.role
       });
-      return res.status(403).send(
-        'You do not have permission to access this resource'
-      );
+      return respond(req, res, 403, 'Your account does not have permission to open this page.');
     }
 
     next();

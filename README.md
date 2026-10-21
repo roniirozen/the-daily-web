@@ -120,7 +120,9 @@ Server routes validate IDs, types, lengths, cursors, ownership, roles, and legal
 workflow transitions. EJS escaped output and DOM `textContent` protect article
 and comment text. Central error middleware handles malformed JSON, validation,
 conflicts, database failures, 404s, and unexpected errors without exposing
-production stack traces.
+production stack traces. Browsers receive a styled error page with a way back,
+API clients receive JSON, and signed-out visitors to protected pages are sent
+to the login page.
 
 The built-in logger writes JSON lines to the console and daily files in `logs/`.
 It records operational events and errors using allowlisted metadata. Passwords,

@@ -76,7 +76,8 @@ async function main() {
     assert.deepEqual(await missingApi.json(), { message: 'Page not found' });
     const missingPage = await fetch(url + '/missing', { headers: { accept: 'text/html' } });
     assert.equal(missingPage.status, 404);
-    assert.equal(await missingPage.text(), 'Page not found');
+    assert(missingPage.headers.get('content-type').includes('text/html'));
+    assert((await missingPage.text()).includes('Page not found'));
     await assert.rejects(async () => {
       const partial = await fetch(url + '/api/feed?case=partial');
       await partial.text();
