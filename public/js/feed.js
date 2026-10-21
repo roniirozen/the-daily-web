@@ -121,6 +121,7 @@
       meta.className = 'article-meta';
       if (article.category) {
         const categorySpan = document.createElement('span');
+        categorySpan.className = 'article-meta-category';
         categorySpan.textContent = article.category;
         meta.appendChild(categorySpan);
       }

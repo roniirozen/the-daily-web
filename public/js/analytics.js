@@ -1,11 +1,12 @@
 (function () {
+  // Same values as the colour tokens in public/css/main.css.
   const COLORS = {
-    axis: '#526174',
-    grid: '#e4e9ef',
-    bar: '#245b92',
-    initial: '#17653f',
-    update: '#b88720',
-    text: '#202c3d'
+    axis: '#5e6470',
+    grid: '#e3ded5',
+    bar: '#1b2a41',
+    initial: '#1e6b3c',
+    update: '#c8102e',
+    text: '#1c1c1c'
   };
 
   const PADDING = { top: 24, right: 24, bottom: 48, left: 56 };

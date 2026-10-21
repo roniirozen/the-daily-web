@@ -1,9 +1,11 @@
-<header class="masthead">
-  <a class="brand" href="/">The Daily Web</a>
-  <nav aria-label="Editor navigation">
-    <a href="/editor" class="<%= locals.navSection === 'articles' ? 'active' : '' %>" <%- locals.navCurrent === 'articles' ? 'aria-current="page"' : '' %>>Article desk</a>
-    <a href="/editor/users" class="<%= locals.navSection === 'users' ? 'active' : '' %>" <%- locals.navCurrent === 'users' ? 'aria-current="page"' : '' %>>Users</a>
-    <a href="/">Public site</a>
-    <form action="/logout" method="post"><button type="submit">Sign out</button></form>
-  </nav>
+<header class="site-header">
+  <div class="container header-content">
+    <a href="/" class="logo">The Daily Web</a>
+    <nav class="main-nav" aria-label="Editor navigation">
+      <a href="/editor" class="<%= locals.navSection === 'articles' ? 'active' : '' %>" <%- locals.navCurrent === 'articles' ? 'aria-current="page"' : '' %>>Article desk</a>
+      <a href="/editor/users" class="<%= locals.navSection === 'users' ? 'active' : '' %>" <%- locals.navCurrent === 'users' ? 'aria-current="page"' : '' %>>Users</a>
+      <a href="/">Public site</a>
+      <form action="/logout" method="post"><button type="submit" class="text-button">Sign out</button></form>
+    </nav>
+  </div>
 </header>
