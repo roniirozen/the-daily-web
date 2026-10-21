@@ -103,12 +103,12 @@ exports.editArticle = async (req, res, next) => {
     article.workingVersion = version;
     if (changed && canChangeStatus(article.status, 'pending', 'editor')) article.status = 'pending';
     await article.save();
-    logger.info('Editor saved article', { userId: req.currentUser._id.toString(), route: '/editor/articles/:id/edit' });
+    logger.info('Editor saved article', { userId: req.currentUser._id.toString(), method: 'PATCH', route: '/editor/articles/:id' });
     return res.redirect(303, `/editor/articles/${article._id}`);
   } catch (error) { return handleError(error, req, res, next); }
 };
 
-exports.approveArticle = async (req, res, next) => {
+async function approveArticle(req, res, next) {
   try {
     const article = await findArticle(req, res);
     if (!article || !prepareStatusChange(article, 'published', req, res)) return;
@@ -126,12 +126,12 @@ exports.approveArticle = async (req, res, next) => {
     article.publishedAt = approvedAt;
     article.publicationHistory.push({ approvedAt, editor: req.currentUser._id, type });
     await article.save();
-    logger.info('Editor approved publication', { userId: req.currentUser._id.toString(), route: '/editor/articles/:id/approve' });
+    logger.info('Editor approved publication', { userId: req.currentUser._id.toString(), method: 'PATCH', route: '/editor/articles/:id/status' });
     return res.redirect(303, `/editor/articles/${article._id}`);
   } catch (error) { return handleError(error, req, res, next); }
-};
+}
 
-exports.returnArticle = async (req, res, next) => {
+async function returnArticle(req, res, next) {
   try {
     const article = await findArticle(req, res);
     if (!article || !prepareStatusChange(article, 'returned', req, res)) return;
@@ -142,9 +142,17 @@ exports.returnArticle = async (req, res, next) => {
     article.editorNote = note.trim();
     article.status = 'returned';
     await article.save();
-    logger.info('Editor returned article', { userId: req.currentUser._id.toString(), route: '/editor/articles/:id/return' });
+    logger.info('Editor returned article', { userId: req.currentUser._id.toString(), method: 'PATCH', route: '/editor/articles/:id/status' });
     return res.redirect(303, `/editor/articles/${article._id}`);
   } catch (error) { return handleError(error, req, res, next); }
+}
+
+// The status is a field of the article resource; the requested new status
+// selects the editorial decision.
+exports.changeStatus = (req, res, next) => {
+  if (req.body?.status === 'published') return approveArticle(req, res, next);
+  if (req.body?.status === 'returned') return returnArticle(req, res, next);
+  return respond(req, res, 400, 'Choose a status of published or returned.');
 };
 
 exports.deleteArticle = async (req, res, next) => {
@@ -155,7 +163,7 @@ exports.deleteArticle = async (req, res, next) => {
     const article = await Article.findByIdAndDelete(req.params.id);
     if (!article) return respond(req, res, 404, 'Article not found.');
     await Promise.all([Comment.deleteMany({ article: article._id }), ViewStat.deleteMany({ article: article._id })]);
-    logger.info('Editor deleted article', { userId: req.currentUser._id.toString(), route: '/editor/articles/:id/delete' });
+    logger.info('Editor deleted article', { userId: req.currentUser._id.toString(), method: 'DELETE', route: '/editor/articles/:id' });
     return res.redirect(303, '/editor');
   } catch (error) { return handleError(error, req, res, next); }
 };

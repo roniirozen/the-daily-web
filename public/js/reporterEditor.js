@@ -60,7 +60,7 @@ if (editorForm) {
         saveMessage.textContent = 'Saving...';
         try {
           const result = articleId
-            ? await request('/reporter/articles/' + articleId + '/autosave', 'PATCH', readFields())
+            ? await request('/reporter/articles/' + articleId, 'PATCH', readFields())
             : await request('/reporter/articles', 'POST', readFields());
           if (!articleId) {
             articleId = result.articleId;
@@ -105,7 +105,7 @@ if (editorForm) {
     try {
       // Flush the last debounce and wait for all edits before changing status.
       await saveChanges();
-      const result = await request('/reporter/articles/' + articleId + '/submit', 'POST');
+      const result = await request('/reporter/articles/' + articleId + '/status', 'PATCH', { status: 'pending' });
       blocked = true;
       showStatus(result.status, result.statusLabel);
       document.getElementById('pending-notice').hidden = false;

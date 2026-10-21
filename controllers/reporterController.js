@@ -183,6 +183,9 @@ exports.submitForReview = async (req, res, next) => {
     if (!reporterId) {
       return res.status(401).json({ message: 'Authentication required' });
     }
+    if (req.body?.status !== 'pending') {
+      return res.status(400).json({ message: 'A Reporter can only change the status to pending' });
+    }
 
     const article = await Article.findOne({
       _id: req.params.id,

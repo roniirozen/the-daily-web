@@ -12,6 +12,7 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 const feedRoutes = require('./routes/feedRoutes');
 const weatherRoutes = require('./routes/weatherRoutes');
 const { loadCurrentUser } = require('./middleware/authMiddleware');
+const { methodOverride } = require('./middleware/methodOverride');
 const { STATUS_LABELS } = require('./utils/articleWorkflow');
 const { notFound, errorHandler, logServerResponses } = require('./middleware/errorMiddleware');
 
@@ -24,6 +25,7 @@ app.locals.statusLabels = STATUS_LABELS;
 
 app.use(express.urlencoded({ extended: true, limit: '512kb' }));
 app.use(express.json({ limit: '512kb' }));
+app.use(methodOverride);
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(logServerResponses);
