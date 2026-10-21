@@ -75,7 +75,9 @@ exports.getDashboard = async (req, res, next) => {
       .select('workingVersion.title workingVersion.category publishedVersion.title reporter status updatedAt')
       .populate('reporter', 'username').sort({ updatedAt: -1, _id: -1 })
       .skip((page - 1) * 20).limit(20).lean();
-    return res.render('editor/dashboard', {
+    // An Ajax request (public/js/listResults.js) receives only the results.
+    res.vary('X-Requested-With');
+    return res.render(req.xhr ? 'editor/partials/article-results' : 'editor/dashboard', {
       pageTitle: 'Editor Dashboard', articles, statuses, selectedStatus: status, total, page, totalPages, search
     });
   } catch (error) { return handleError(error, req, res, next); }

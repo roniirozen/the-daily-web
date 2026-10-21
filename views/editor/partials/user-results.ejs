@@ -1,0 +1,17 @@
+<p class="muted results-summary" data-results-summary><%= total %> user<%= total === 1 ? '' : 's' %><%= totalPages > 1 ? ' · page ' + page + ' of ' + totalPages : '' %></p>
+<% if (!users.length) { %>
+  <section class="panel empty"><h2>No users found</h2><p>Try a different username prefix or create an account.</p></section>
+<% } else { %>
+  <div class="table-scroll"><table>
+    <caption class="sr-only">Newsroom accounts sorted by username</caption>
+    <thead><tr><th scope="col">Username</th><th scope="col">Role</th><th scope="col">Created</th><th scope="col">Action</th></tr></thead>
+    <tbody><% users.forEach(user => { %>
+      <tr><th scope="row"><%= user.username %></th><td><span class="badge"><%= user.role === 'editor' ? 'Editor' : 'Reporter' %></span></td><td><time datetime="<%= user.createdAt.toISOString() %>"><%= user.createdAt.toLocaleDateString('en-GB') %></time></td><td><a href="/editor/users/<%= user._id %>/edit">Manage<span class="sr-only"> <%= user.username %></span></a></td></tr>
+    <% }); %></tbody>
+  </table></div>
+  <nav class="pagination" aria-label="User list pages">
+    <% if (page > 1) { %><a href="/editor/users?search=<%= encodeURIComponent(search) %>&amp;page=<%= page - 1 %>" data-results-link>Previous</a><% } %>
+    <span>Page <%= page %> of <%= totalPages %></span>
+    <% if (page < totalPages) { %><a href="/editor/users?search=<%= encodeURIComponent(search) %>&amp;page=<%= page + 1 %>" data-results-link>Next</a><% } %>
+  </nav>
+<% } %>

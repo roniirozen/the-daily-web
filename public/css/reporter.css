@@ -28,6 +28,7 @@
 .editor-columns { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
 .editor-actions { border-top: 1px solid #deded9; padding-top: 18px; }
 .editor-actions p { margin: 0; overflow-wrap: anywhere; }
+[data-results][aria-busy="true"] { opacity: .6; transition: opacity .2s; }
 .empty-state { text-align: center; padding: 50px 24px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid #36556d; outline-offset: 3px; }

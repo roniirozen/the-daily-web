@@ -51,6 +51,10 @@ table small { display: block; font-weight: normal; margin-top: .3rem; }
 .masthead form { margin: 0; }
 .editor-page .button-link { display: inline-block; background: #245b92; color: white; padding: .7rem 1rem; border-radius: .35rem; text-decoration: none; }
 .account-form { max-width: 760px; }
+.results-status:empty { display: none; }
+.results-status { margin: -.5rem 0 1rem; color: #526174; }
+.results-summary { margin: 0 0 .75rem; }
+[data-results][aria-busy="true"] { opacity: .6; transition: opacity .2s; }
 .account-form select { width: 100%; margin-bottom: 1rem; }
 .field-help { color: #526174; font-size: .9rem; margin: -.5rem 0 1.3rem; }
 .form-error { background: #fff0ef; border-left: 4px solid #a42d32; padding: 1rem; color: #84262b; margin-bottom: 1.5rem; overflow-wrap: anywhere; }

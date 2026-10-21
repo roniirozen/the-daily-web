@@ -37,7 +37,9 @@ exports.getDashboard = async (req, res, next) => {
       .limit(pageSize)
       .lean();
 
-    res.render('reporter/dashboard', {
+    // An Ajax request (public/js/listResults.js) receives only the results.
+    res.vary('X-Requested-With');
+    res.render(req.xhr ? 'reporter/partials/article-list' : 'reporter/dashboard', {
       pageTitle: 'Reporter Dashboard',
       articles,
       page,
