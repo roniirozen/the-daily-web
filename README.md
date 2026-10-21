@@ -113,9 +113,10 @@ initial publication and updates and compares views in the 24 hours around each
 update. Editor-only statistics CRUD is under `/editor/analytics/:id/stats`
 and is available from the statistics table on each analytics page.
 
-Open-Meteo responses are cached on the server for less than 15 minutes.
-Concurrent callers share a single external request, and expired data is hidden
-if a refresh fails.
+Open-Meteo responses are cached on the server for five minutes. Concurrent
+callers share a single external request. If a refresh fails, data younger than
+15 minutes is still served and the service is retried after a minute; older
+data is never shown. The widget displays when the data was last updated.
 
 ## Validation, errors and logging
 
