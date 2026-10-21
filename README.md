@@ -67,8 +67,9 @@ Never use these demo passwords outside a disposable local database.
 
 - Guests search, filter, sort, and infinitely scroll approved news; read
   server-rendered articles; post comments; and view cached weather.
-- Reporters create incomplete drafts, use automatic server saves, edit only
-  their own articles, submit work, read correction notes, and resubmit.
+- Reporters create incomplete drafts, use automatic server saves (sent at
+  once when the page is closed, reloaded, or hidden), edit only their own
+  articles, submit work, read correction notes, and resubmit.
 - Editors search/filter and edit all articles, approve pending submissions or
   return them with a required note, delete articles, manage users, edit or
   delete comments from the article page, and inspect or administer view

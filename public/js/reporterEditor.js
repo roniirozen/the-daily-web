@@ -12,6 +12,7 @@ if (editorForm) {
   let saving = null;
   let submitting = false;
   let timer;
+  let unprotectedRequest = false;
 
   function readFields() {
     const values = {};
@@ -22,10 +23,16 @@ if (editorForm) {
   }
 
   async function request(url, method, body = {}) {
+    const json = JSON.stringify(body);
+    const keepalive = new Blob([json]).size < 60000;
+    unprotectedRequest = !keepalive;
     const response = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: json,
+      // A keepalive request still reaches the server if the page closes
+      // mid-save. Browsers allow it only for bodies under 64 KB.
+      keepalive
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok || response.redirected) {
@@ -107,8 +114,24 @@ if (editorForm) {
     }
   });
 
+  // Closing, reloading or hiding the page saves at once instead of waiting
+  // for the typing pause, so the last words are not lost.
+  function saveNow() {
+    if (blocked || submitting || !dirty) return;
+    clearTimeout(timer);
+    saveChanges().catch(() => { /* The save status already explains the error. */ });
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') saveNow();
+  });
+  window.addEventListener('pagehide', saveNow);
+
   window.addEventListener('beforeunload', (event) => {
-    if (dirty || saving || submitting) {
+    saveNow();
+    // Warn only when text is still waiting behind a running save, or when a
+    // very large save could be cancelled by closing the page.
+    if (dirty || submitting || (saving && unprotectedRequest)) {
       event.preventDefault();
       event.returnValue = '';
     }
