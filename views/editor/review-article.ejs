@@ -27,17 +27,17 @@
         <h2 id="working-heading"><%= pending ? (live ? 'Review this update' : 'Review first publication') : 'Current working copy' %></h2>
         <p class="muted">Working record updated <time datetime="<%= revision %>"><%= article.updatedAt.toLocaleString('en-GB') %></time></p>
         <% if (live && !hasChanges) { %><p class="muted">The saved article fields match the public version.</p><% } %>
-        <p class="muted"><%= pending ? 'Edit this submission, then save before approving. Approval uses the saved version.' : 'Editing and review actions are available only after the reporter submits this article.' %></p>
+        <p class="muted"><%= pending ? 'Edit this submission, then save before approving. Approval uses the saved version.' : (article.status === 'published' ? 'Saving changes creates a pending update. Readers keep seeing the current public version until you approve it.' : 'You can edit this working copy. Approval and return actions become available after the reporter submits it.') %></p>
         <form id="working-form" action="<%= base %>/edit" method="post">
           <input type="hidden" name="revision" value="<%= revision %>">
-          <fieldset <%= pending ? '' : 'disabled' %>>
+          <fieldset>
             <legend class="sr-only">Working article fields</legend>
             <label for="title">Title</label><input id="title" name="title" maxlength="200" value="<%= working.title || '' %>" required>
             <label for="category">Category</label><input id="category" name="category" maxlength="80" value="<%= working.category || '' %>" required>
             <label for="summary">Summary</label><textarea id="summary" name="summary" maxlength="1000" rows="4" required><%= working.summary || '' %></textarea>
             <label for="content">Content</label><textarea id="content" name="content" maxlength="50000" rows="14" required><%= working.content || '' %></textarea>
             <label for="imageUrl">Image URL <span class="muted">(optional, HTTP or HTTPS)</span></label><input id="imageUrl" name="imageUrl" type="url" maxlength="2048" value="<%= working.imageUrl || '' %>">
-            <% if (pending) { %><button type="submit">Save working version</button><% } %>
+            <button type="submit">Save working version</button>
           </fieldset>
         </form>
       </section>

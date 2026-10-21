@@ -33,19 +33,23 @@ async function findArticle(req, res) {
   return article;
 }
 
-function prepareReviewSave(article, req, res) {
-  if (article.status !== 'pending') {
-    res.status(409).send('Only pending articles can be edited, approved or returned.');
-    return false;
-  }
+function prepareRevisionSave(article, req, res) {
   if (req.body?.revision !== article.updatedAt.toISOString()) {
     res.status(409).send('This review is out of date. Reload the article and try again.');
     return false;
   }
   // Mongoose includes this condition in save's update: only one competing
-  // review action can succeed, even if both requests read the pending state.
-  article.$where = { status: 'pending', updatedAt: article.updatedAt };
+  // action can succeed, even if both requests read the same revision.
+  article.$where = { status: article.status, updatedAt: article.updatedAt };
   return true;
+}
+
+function prepareReviewSave(article, req, res) {
+  if (article.status !== 'pending') {
+    res.status(409).send('Only pending articles can be approved or returned.');
+    return false;
+  }
+  return prepareRevisionSave(article, req, res);
 }
 
 exports.getDashboard = async (req, res, next) => {
@@ -83,16 +87,21 @@ exports.getReviewArticle = async (req, res, next) => {
   } catch (error) { return handleError(error, res, next); }
 };
 
+// Editors may edit any article. Editing a published article creates a
+// pending update, so the public snapshot changes only after approval.
 exports.editArticle = async (req, res, next) => {
   try {
     const article = await findArticle(req, res);
-    if (!article || !prepareReviewSave(article, req, res)) return;
-    const version = Object.fromEntries(fields.map(field => [field, req.body?.[field] ?? '']));
-    const message = validateVersion(version);
-    if (message) return res.status(400).send(message);
+    if (!article || !prepareRevisionSave(article, req, res)) return;
+    const input = validateArticleInput(Object.fromEntries(fields.map(field => [field, req.body?.[field] ?? ''])), true);
+    if (input.error) return res.status(400).send(input.error);
+    // Browsers submit textarea line breaks as CRLF; store them like autosave does.
+    const version = { ...input.fields, content: input.fields.content.replace(/\r\n?/g, '\n') };
+    const changed = fields.some(field => version[field] !== (article.publishedVersion?.[field] || ''));
     article.workingVersion = version;
+    if (article.status === 'published' && changed) article.status = 'pending';
     await article.save();
-    logger.info('Editor saved submitted article', { userId: req.currentUser._id.toString(), route: '/editor/articles/:id/edit' });
+    logger.info('Editor saved article', { userId: req.currentUser._id.toString(), route: '/editor/articles/:id/edit' });
     return res.redirect(303, `/editor/articles/${article._id}`);
   } catch (error) { return handleError(error, res, next); }
 };

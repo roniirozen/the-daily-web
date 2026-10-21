@@ -98,6 +98,16 @@ test('release HTTP matrix against isolated MongoDB', { timeout: 120000 }, async 
     article = await Article.findById(id);
     assert.deepEqual(article.publicationHistory.map(entry => entry.type), ['initial', 'update']);
     await request(review + '/approve', 409, { cookie: editorCookie, method: 'POST', body: { revision: article.updatedAt.toISOString() } });
+    const live = { ...article.publishedVersion.toObject(), content: article.publishedVersion.content.replace(/\n/g, '\r\n') };
+    await request(review + '/edit', 303, { cookie: editorCookie, method: 'POST', body: { ...live, revision: article.updatedAt.toISOString() } });
+    article = await Article.findById(id);
+    assert.equal(article.status, 'published');
+    await request(review + '/edit', 303, { cookie: editorCookie, method: 'POST', body: { ...live, title: 'Editor correction', revision: article.updatedAt.toISOString() } });
+    article = await Article.findById(id);
+    assert.equal(article.status, 'pending');
+    assert((await request('/articles/' + id, 200)).text.includes('New revised headline'));
+    await request(review + '/approve', 303, { cookie: editorCookie, method: 'POST', body: { revision: article.updatedAt.toISOString() } });
+    assert((await request('/articles/' + id, 200)).text.includes('Editor correction'));
   });
 
   await t.test('Comment CRUD, rolling rate limit, header spoofing and pagination', async () => {
@@ -175,7 +185,7 @@ test('release HTTP matrix against isolated MongoDB', { timeout: 120000 }, async 
     await request(route + '/' + id, 400, { cookie: editorCookie, method: 'PATCH', body: { viewCount: -1 } });
     await request(route + '/' + id, 200, { cookie: editorCookie, method: 'PATCH', body: { viewCount: 15 } });
     const analytics = (await request('/editor/analytics/' + t.articleId + '/data', 200, { cookie: editorCookie })).data;
-    assert.equal(analytics.publicationHistory.length, 2); assert(analytics.timeline.some(point => point.viewCount === 15));
+    assert.equal(analytics.publicationHistory.length, 3); assert(analytics.timeline.some(point => point.viewCount === 15));
     await request(route + '/' + id, 200, { cookie: editorCookie, method: 'DELETE' });
     await request(route + '/' + id, 404, { cookie: editorCookie });
     await request('/editor/articles/' + t.articleId + '/delete', 303, { cookie: editorCookie, method: 'POST' });
