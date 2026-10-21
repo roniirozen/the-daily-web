@@ -8,6 +8,112 @@ if (commentForm) {
   const submitButton = commentForm.querySelector('button[type="submit"]');
   const commentsList = document.getElementById('comments-list');
   const moreButton = document.getElementById('more-comments');
+  const canModerate = commentForm.dataset.canModerate === 'true';
+
+  async function moderationRequest(commentId, method, body) {
+    const response = await fetch(`/api/comments/${commentId}`, {
+      method,
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      ...(body ? { body: JSON.stringify(body) } : {})
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.message || 'The comment could not be updated.');
+    return result;
+  }
+
+  function showCommentsEmptyState() {
+    if (commentsList.querySelector('.comment')) return;
+    const empty = document.createElement('p');
+    empty.id = 'no-comments-message';
+    empty.className = 'empty-message';
+    empty.textContent = 'No comments yet. Be the first to join the discussion.';
+    commentsList.appendChild(empty);
+  }
+
+  function startEditing(element, actions) {
+    const content = element.querySelector('.comment-content');
+    const editor = document.createElement('form');
+    editor.className = 'comment-edit-form';
+    const label = document.createElement('label');
+    label.className = 'visually-hidden';
+    label.htmlFor = `edit-${element.dataset.commentId}`;
+    label.textContent = 'Edit comment';
+    const textarea = document.createElement('textarea');
+    textarea.id = label.htmlFor;
+    textarea.rows = 3;
+    textarea.maxLength = 1000;
+    textarea.required = true;
+    textarea.value = content.textContent;
+    const save = document.createElement('button');
+    save.type = 'submit';
+    save.className = 'comment-action';
+    save.textContent = 'Save';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'comment-action';
+    cancel.textContent = 'Cancel';
+    editor.append(label, textarea, save, cancel);
+
+    content.hidden = true;
+    actions.hidden = true;
+    element.appendChild(editor);
+    textarea.focus();
+
+    function finish() {
+      editor.remove();
+      content.hidden = false;
+      actions.hidden = false;
+    }
+
+    cancel.addEventListener('click', finish);
+    editor.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!textarea.value.trim()) return;
+      save.disabled = true;
+      try {
+        const result = await moderationRequest(element.dataset.commentId, 'PATCH', { content: textarea.value });
+        content.textContent = result.comment.content;
+        finish();
+        showMessage('Comment updated.', 'success');
+      } catch (error) {
+        save.disabled = false;
+        showMessage(error.message, 'error');
+      }
+    });
+  }
+
+  // Editor-only controls. Hiding them from other users is only presentation:
+  // the API rejects edits and deletions from anyone who is not an Editor.
+  function addModerationControls(element) {
+    if (!canModerate || element.querySelector('.comment-actions')) return;
+    const actions = document.createElement('div');
+    actions.className = 'comment-actions';
+    const edit = document.createElement('button');
+    edit.type = 'button';
+    edit.className = 'comment-action';
+    edit.textContent = 'Edit';
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'comment-action comment-action-danger';
+    remove.textContent = 'Delete';
+    actions.append(edit, remove);
+    element.appendChild(actions);
+
+    edit.addEventListener('click', () => startEditing(element, actions));
+    remove.addEventListener('click', async () => {
+      if (!window.confirm('Delete this comment permanently?')) return;
+      remove.disabled = true;
+      try {
+        await moderationRequest(element.dataset.commentId, 'DELETE');
+        element.remove();
+        showCommentsEmptyState();
+        showMessage('Comment deleted.', 'success');
+      } catch (error) {
+        remove.disabled = false;
+        showMessage(error.message, 'error');
+      }
+    });
+  }
 
   function commentElement(comment) {
     const element = document.createElement('article');
@@ -25,6 +131,7 @@ if (commentForm) {
     content.className = 'comment-content';
     content.textContent = comment.content;
     element.append(header, content);
+    addModerationControls(element);
     return element;
   }
 
@@ -117,4 +224,6 @@ if (commentForm) {
       commentForm.removeAttribute('aria-busy');
     }
   });
+
+  commentsList.querySelectorAll('.comment').forEach(addModerationControls);
 }

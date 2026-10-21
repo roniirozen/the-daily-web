@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Article = require('../models/Article');
+const { escapeRegex } = require('../utils/escapeRegex');
 
 const PAGE_SIZE = 20;
 const SORT_OPTIONS = ['date', 'popularity'];
@@ -58,8 +59,10 @@ exports.getFeed = async (req, res, next) => {
       filter['publishedVersion.category'] = query.category.trim();
     }
 
+    // Case-insensitive substring match on the public title: "cyber" finds
+    // "Cybersecurity", and every word of "Report 211" must appear together.
     if (query.q?.trim()) {
-      filter.$text = { $search: query.q.trim() };
+      filter['publishedVersion.title'] = { $regex: escapeRegex(query.q.trim()), $options: 'i' };
     }
 
     if (viewedFilter !== 'all') {
@@ -97,7 +100,7 @@ exports.getFeed = async (req, res, next) => {
 
     // Query is executed entirely in MongoDB: filtering, sorting and paging
     // all happen server-side via the indexes on publishedAt / totalViews /
-    // publishedVersion.category / publishedVersion text fields.
+    // publishedVersion.category fields.
     const docs = await Article.find(filter)
       .select('publishedVersion.title publishedVersion.imageUrl publishedVersion.summary publishedVersion.category publishedAt totalViews reporter')
       .populate('reporter', 'username')

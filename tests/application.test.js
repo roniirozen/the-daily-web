@@ -43,7 +43,8 @@ test('release HTTP matrix against isolated MongoDB', { timeout: 120000 }, async 
     return result.response.headers.get('set-cookie')?.split(';')[0];
   }
   await request('/', 200); await request('/login', 200);
-  await request('/reporter', 302); await request('/editor', 401); await request('/editor/users', 401);
+  await request('/reporter', 302); await request('/editor', 302); await request('/editor/users', 302);
+  await request('/editor', 401, { headers: { Accept: 'application/json' } });
   await login('missing', password, 401);
   const reporterCookie = await login(reporter.username);
   const otherCookie = await login(otherReporter.username);
@@ -84,17 +85,38 @@ test('release HTTP matrix against isolated MongoDB', { timeout: 120000 }, async 
     await request(route + '/autosave', 200, { cookie: reporterCookie, method: 'PATCH', body: { title: 'New revised headline' } });
     assert((await request('/articles/' + id, 200)).text.includes('Approved original headline'));
     await request(route + '/submit', 200, { cookie: reporterCookie, method: 'POST' });
+    const submitted = await Article.findById(id);
     assert(!(await request('/articles/' + id, 200)).text.includes('New revised headline'));
+    // Views are recorded after the response; a view must not change the revision.
+    for (let i = 0; i < 50 && (await Article.findById(id)).totalViews === submitted.totalViews; i++) {
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
     article = await Article.findById(id);
+    assert(article.totalViews > submitted.totalViews);
+    assert.equal(article.updatedAt.toISOString(), submitted.updatedAt.toISOString());
     await request(review + '/approve', 303, { cookie: editorCookie, method: 'POST', body: { revision: article.updatedAt.toISOString() } });
     assert((await request('/articles/' + id, 200)).text.includes('New revised headline'));
     article = await Article.findById(id);
     assert.deepEqual(article.publicationHistory.map(entry => entry.type), ['initial', 'update']);
     await request(review + '/approve', 409, { cookie: editorCookie, method: 'POST', body: { revision: article.updatedAt.toISOString() } });
+    const live = { ...article.publishedVersion.toObject(), content: article.publishedVersion.content.replace(/\n/g, '\r\n') };
+    await request(review + '/edit', 303, { cookie: editorCookie, method: 'POST', body: { ...live, revision: article.updatedAt.toISOString() } });
+    article = await Article.findById(id);
+    assert.equal(article.status, 'published');
+    await request(review + '/edit', 303, { cookie: editorCookie, method: 'POST', body: { ...live, title: 'Editor correction', revision: article.updatedAt.toISOString() } });
+    article = await Article.findById(id);
+    assert.equal(article.status, 'pending');
+    assert((await request('/articles/' + id, 200)).text.includes('New revised headline'));
+    await request(review + '/approve', 303, { cookie: editorCookie, method: 'POST', body: { revision: article.updatedAt.toISOString() } });
+    assert((await request('/articles/' + id, 200)).text.includes('Editor correction'));
   });
 
   await t.test('Comment CRUD, rolling rate limit, header spoofing and pagination', async () => {
     const route = '/api/articles/' + t.articleId + '/comments';
+    assert((await request('/articles/' + t.articleId, 200)).text.includes('data-can-moderate="false"'));
+    assert((await request('/articles/' + t.articleId, 200, { cookie: reporterCookie })).text.includes('data-can-moderate="false"'));
+    assert((await request('/articles/' + t.articleId, 200, { cookie: editorCookie })).text.includes('data-can-moderate="true"'));
+    assert((await request('/editor/analytics/' + t.articleId, 200, { cookie: editorCookie })).text.includes('id="stats-rows"'));
     await request(route, 400, { method: 'POST', body: { authorName: [], content: 'Invalid author' } });
     const commentIds = [];
     for (let i = 0; i < 3; i++) commentIds.push((await request(route, 201, { method: 'POST', body: { authorName: 'Guest', content: 'Comment ' + i } })).data.comment._id);
@@ -160,7 +182,7 @@ test('release HTTP matrix against isolated MongoDB', { timeout: 120000 }, async 
 
   await t.test('View statistics full CRUD, analytics history and article cleanup', async () => {
     const route = '/editor/analytics/' + t.articleId + '/stats';
-    await request(route, 401); await request(route, 403, { cookie: reporterCookie });
+    await request(route, 401, { headers: { Accept: 'application/json' } }); await request(route, 403, { cookie: reporterCookie });
     await request(route, 400, { cookie: editorCookie, method: 'POST', body: { bucketStart: 'invalid', viewCount: 5 } });
     const created = await request(route, 201, { cookie: editorCookie, method: 'POST', body: { bucketStart: '2025-01-01T12:00:00Z', viewCount: 10 } });
     const id = created.data.record._id;
@@ -168,7 +190,7 @@ test('release HTTP matrix against isolated MongoDB', { timeout: 120000 }, async 
     await request(route + '/' + id, 400, { cookie: editorCookie, method: 'PATCH', body: { viewCount: -1 } });
     await request(route + '/' + id, 200, { cookie: editorCookie, method: 'PATCH', body: { viewCount: 15 } });
     const analytics = (await request('/editor/analytics/' + t.articleId + '/data', 200, { cookie: editorCookie })).data;
-    assert.equal(analytics.publicationHistory.length, 2); assert(analytics.timeline.some(point => point.viewCount === 15));
+    assert.equal(analytics.publicationHistory.length, 3); assert(analytics.timeline.some(point => point.viewCount === 15));
     await request(route + '/' + id, 200, { cookie: editorCookie, method: 'DELETE' });
     await request(route + '/' + id, 404, { cookie: editorCookie });
     await request('/editor/articles/' + t.articleId + '/delete', 303, { cookie: editorCookie, method: 'POST' });
@@ -208,6 +230,12 @@ test('release HTTP matrix against isolated MongoDB', { timeout: 120000 }, async 
     assert.equal(combined.articles.length, 20);
     assert(combined.articles.every(article => article.category === 'Science' && viewedIds.includes(article.id)));
     assert(combined.articles.every((article, i, rows) => !i || rows[i - 1].totalViews >= article.totalViews));
+    const partial = (await request('/api/feed?q=' + encodeURIComponent('aLcOn rep'), 200)).data;
+    assert.equal(partial.articles.length, 20);
+    assert(partial.articles.every(article => article.title.startsWith('Falcon report')));
+    const phrase = (await request('/api/feed?q=' + encodeURIComponent('Falcon report 1999'), 200)).data;
+    assert.deepEqual(phrase.articles.map(article => article.title), ['Falcon report 1999']);
+    assert.equal((await request('/api/feed?q=' + encodeURIComponent('.*'), 200)).data.articles.length, 0);
     const unviewed = (await request('/api/feed?viewed=unviewed&viewedIds=' + viewedIds.join(','), 200)).data;
     assert(unviewed.articles.every(article => !viewedIds.includes(article.id)));
     await request('/api/feed?sort=invalid', 400);

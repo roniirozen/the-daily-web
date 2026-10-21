@@ -1,5 +1,6 @@
 const Article = require('../models/Article');
 const { validateArticleInput } = require('../utils/articleValidation');
+const { respond } = require('../middleware/errorMiddleware');
 
 function getReporterId(req) {
   return req.session?.user?.id || null;
@@ -10,7 +11,7 @@ exports.getDashboard = async (req, res, next) => {
     const reporterId = getReporterId(req);
 
     if (!reporterId) {
-      return res.status(401).send('Authentication required');
+      return respond(req, res, 401, 'Authentication required');
     }
 
     const pageSize = 20;
@@ -20,7 +21,7 @@ exports.getDashboard = async (req, res, next) => {
         (typeof req.query.page !== 'string' || !/^[1-9]\d*$/.test(req.query.page))) ||
       !Number.isSafeInteger(requestedPage) || requestedPage < 1
     ) {
-      return res.status(400).send('Invalid page number');
+      return respond(req, res, 400, 'Invalid page number');
     }
 
     const filter = { reporter: reporterId };
@@ -90,7 +91,7 @@ exports.getEditArticle = async (req, res, next) => {
     const reporterId = getReporterId(req);
 
     if (!reporterId) {
-      return res.status(401).send('Authentication required');
+      return respond(req, res, 401, 'Authentication required');
     }
 
     const article = await Article.findOne({
@@ -99,7 +100,7 @@ exports.getEditArticle = async (req, res, next) => {
     });
 
     if (!article) {
-      return res.status(404).send('Article not found');
+      return respond(req, res, 404, 'Article not found');
     }
 
     res.render('reporter/edit-article', {

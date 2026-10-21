@@ -50,12 +50,43 @@
       <ol id="update-comparisons" aria-live="polite"></ol>
     </section>
 
+    <section class="panel" aria-labelledby="stats-heading">
+      <h2 id="stats-heading">Manage view statistics</h2>
+      <p class="muted">Each row is one hourly bucket of recorded views. Changes update the graph and the article's popularity total.</p>
+      <form id="stats-create" class="stats-create">
+        <div>
+          <label for="stats-hour">Hour</label>
+          <input id="stats-hour" name="bucketStart" type="datetime-local" step="3600" required>
+        </div>
+        <div>
+          <label for="stats-count">Views</label>
+          <input id="stats-count" name="viewCount" type="number" min="0" max="1000000000" step="1" required>
+        </div>
+        <button type="submit">Add statistics</button>
+      </form>
+      <p id="stats-message" class="stats-message" role="status" aria-live="polite"></p>
+      <div class="table-scroll">
+        <table>
+          <caption class="sr-only">Hourly view statistics, newest first</caption>
+          <thead><tr><th scope="col">Hour</th><th scope="col">Views</th><th scope="col">Actions</th></tr></thead>
+          <tbody id="stats-rows"></tbody>
+        </table>
+      </div>
+      <nav class="pagination" aria-label="Statistics pages">
+        <button id="stats-prev" class="secondary" type="button">Newer</button>
+        <span id="stats-page">Page 1</span>
+        <button id="stats-next" class="secondary" type="button">Older</button>
+      </nav>
+    </section>
+
     <p><a href="/editor/articles/<%= article._id %>">&larr; Back to review</a></p>
   </main>
 
   <script>
     window.__ANALYTICS_DATA_URL__ = '/editor/analytics/<%= article._id %>/data';
+    window.__ANALYTICS_STATS_URL__ = '/editor/analytics/<%= article._id %>/stats';
   </script>
   <script src="/js/analytics.js"></script>
+  <script src="/js/viewStatsAdmin.js" defer></script>
 </body>
 </html>

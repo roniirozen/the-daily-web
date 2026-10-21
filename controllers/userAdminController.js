@@ -1,4 +1,5 @@
 const userAdmin = require('../services/userAdminService');
+const { respond } = require('../middleware/errorMiddleware');
 
 // Explicit view data prevents passwords and database credentials reaching EJS.
 function formValues(body = {}) {
@@ -22,7 +23,7 @@ exports.listUsers = async (req, res, next) => {
     res.render('editor/users', { pageTitle: 'User administration', ...data });
   } catch (error) {
     const known = expectedError(error);
-    if (known) return res.status(known.status).send(known.message);
+    if (known) return respond(req, res, known.status, known.message);
     next(error);
   }
 };
@@ -56,7 +57,7 @@ async function renderEdit(req, res, next, error = null, preserveInput = false) {
     });
   } catch (failure) {
     const known = expectedError(failure);
-    if (known) return res.status(known.status).send(known.message);
+    if (known) return respond(req, res, known.status, known.message);
     next(failure);
   }
 }

@@ -1,4 +1,8 @@
-const CACHE_MAX_AGE_MS = 15 * 60 * 1000; // Displayed data must never be older than 15 minutes.
+// Open-Meteo itself reports conditions in 15-minute steps, so the server
+// refreshes well within the 15-minute limit. If a refresh fails, the last
+// result may still be served while it is younger than 15 minutes.
+const CACHE_MAX_AGE_MS = 5 * 60 * 1000;
+const STALE_LIMIT_MS = 15 * 60 * 1000; // Displayed data must never be older than this.
 
 // Non-secret location defaults (Tel Aviv). Override via environment
 // variables if the project needs a different city - no API key required.
@@ -21,13 +25,15 @@ const WEATHER_CODES = {
 // external call per page view.
 let cache = null; // { fetchedAt: number, data: object }
 let inFlightRequest = null;
+let retryAfter = 0; // After a failed refresh, wait before calling Open-Meteo again.
+const RETRY_DELAY_MS = 60 * 1000;
 
 function describeCode(code) {
   return WEATHER_CODES[code] || 'Unknown conditions';
 }
 
-function isFresh(entry) {
-  return Boolean(entry) && (Date.now() - entry.fetchedAt) < CACHE_MAX_AGE_MS;
+function isYoungerThan(entry, maxAge) {
+  return Boolean(entry) && (Date.now() - entry.fetchedAt) < maxAge;
 }
 
 async function fetchFromOpenMeteo() {
@@ -58,12 +64,18 @@ async function fetchFromOpenMeteo() {
 }
 
 /*
-  Returns cached weather when it is under 15 minutes old. Otherwise fetches
+  Returns cached weather when it is under 5 minutes old. Otherwise fetches
   fresh data. Concurrent callers during a refresh share the same in-flight
   request instead of each triggering their own call to Open-Meteo.
 */
 async function getWeather() {
-  if (isFresh(cache)) {
+  if (isYoungerThan(cache, CACHE_MAX_AGE_MS)) {
+    return cache.data;
+  }
+
+  // Shortly after a failure, answer from recent data without waiting for
+  // another slow request to the external service.
+  if (Date.now() < retryAfter && isYoungerThan(cache, STALE_LIMIT_MS)) {
     return cache.data;
   }
 
@@ -71,24 +83,36 @@ async function getWeather() {
     inFlightRequest = fetchFromOpenMeteo()
       .then(data => {
         cache = { fetchedAt: Date.now(), data };
+        retryAfter = 0;
         return data;
+      }, error => {
+        retryAfter = Date.now() + RETRY_DELAY_MS;
+        throw error;
       })
       .finally(() => {
         inFlightRequest = null;
       });
   }
 
-  // Expired observations must not be presented as current during an outage.
-  return inFlightRequest;
+  try {
+    return await inFlightRequest;
+  } catch (error) {
+    // During an outage, recent data is still acceptable. Anything older than
+    // the limit must not be presented as current weather.
+    if (isYoungerThan(cache, STALE_LIMIT_MS)) return cache.data;
+    throw error;
+  }
 }
 
 function clearCache() {
   cache = null;
   inFlightRequest = null;
+  retryAfter = 0;
 }
 
 module.exports = {
   getWeather,
   clearCache,
-  CACHE_MAX_AGE_MS
+  CACHE_MAX_AGE_MS,
+  STALE_LIMIT_MS
 };

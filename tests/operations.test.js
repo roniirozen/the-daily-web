@@ -60,12 +60,12 @@ test('database sessions survive process restart; cookies, expiry, logout and log
   const currentRole = await fetch(base + '/editor', { headers: { cookie }, redirect: 'manual' });
   assert.equal(currentRole.status, 200); await currentRole.text();
   for (const malformed of ['session_token=%E0%A4%A', 'session_token=', 'broken-cookie', 'session_token=fake']) {
-    const response = await fetch(base + '/editor', { headers: { cookie: malformed } });
-    assert.equal(response.status, 401); await response.text();
+    const response = await fetch(base + '/editor', { headers: { cookie: malformed }, redirect: 'manual' });
+    assert.equal(response.status, 302); await response.text();
   }
   await Session.updateOne({ _id: session._id }, { $set: { expiresAt: new Date(Date.now() - 1000) } });
-  const expired = await fetch(base + '/editor', { headers: { cookie } });
-  assert.equal(expired.status, 401); await expired.text();
+  const expired = await fetch(base + '/editor', { headers: { cookie }, redirect: 'manual' });
+  assert.equal(expired.status, 302); await expired.text();
   const logout = await fetch(base + '/logout', { method: 'POST', redirect: 'manual', headers: { cookie } });
   assert.equal(logout.status, 302);
   assert.equal(await Session.countDocuments({ _id: session._id }), 0);

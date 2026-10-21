@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const weather = require('../services/weatherService');
 
-test('weather shares concurrent requests, caches for 15 minutes, and refuses expired data during outages', async t => {
+test('weather shares concurrent requests, refreshes every 5 minutes, and never returns data older than 15 minutes', async t => {
   const originalFetch = global.fetch;
   const originalNow = Date.now;
   let now = originalNow();
@@ -22,7 +22,16 @@ test('weather shares concurrent requests, caches for 15 minutes, and refuses exp
   await weather.getWeather();
   assert.equal(calls, 1);
   now += 2;
+  await weather.getWeather();
+  assert.equal(calls, 2, 'refreshes once the 5-minute cache expires');
+
   global.fetch = async () => { calls += 1; throw new Error('Simulated outage'); };
+  now += weather.CACHE_MAX_AGE_MS + 1;
+  assert.equal((await weather.getWeather()).temperatureC, 25, 'recent data survives an outage');
+  assert.equal(calls, 3);
+  await weather.getWeather();
+  assert.equal(calls, 3, 'waits before retrying a failed service');
+  now += weather.STALE_LIMIT_MS;
   await assert.rejects(weather.getWeather(), /Simulated outage/);
-  assert.equal(calls, 2);
+  assert.equal(calls, 4, 'data older than 15 minutes is never returned');
 });

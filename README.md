@@ -67,11 +67,14 @@ Never use these demo passwords outside a disposable local database.
 
 - Guests search, filter, sort, and infinitely scroll approved news; read
   server-rendered articles; post comments; and view cached weather.
-- Reporters create incomplete drafts, use automatic server saves, edit only
-  their own articles, submit work, read correction notes, and resubmit.
-- Editors search/filter all articles, edit pending submissions, approve or
-  return them with a required note, delete articles, manage users, moderate
-  comments, and inspect or administer view statistics.
+- Reporters create incomplete drafts, use automatic server saves (sent at
+  once when the page is closed, reloaded, or hidden), edit only their own
+  articles, submit work, read correction notes, and resubmit.
+- Editors search/filter and edit all articles, approve pending submissions or
+  return them with a required note, delete articles, manage users, edit or
+  delete comments from the article page, and inspect or administer view
+  statistics. An Editor's change to a published article becomes a pending
+  update that still needs approval.
 
 Passwords use Node `scrypt` with random salts. Random session tokens are stored
 in MongoDB only as SHA-256 hashes. HTTP-only SameSite cookies carry the raw
@@ -100,18 +103,20 @@ from stale concurrent writes.
 ## Feed, analytics and weather
 
 The feed reads exactly 20 articles at a time with MongoDB cursor pagination.
-Search covers approved titles; category, viewed/unviewed, publication date, and
-popularity criteria can be combined. Viewed state uses the shared
+Search matches any part of approved titles, ignoring case; category,
+viewed/unviewed, publication date, and popularity criteria can be combined. Viewed state uses the shared
 `dailyWebViewedArticles` localStorage key and tolerates unavailable storage.
 
 Every successful public article response atomically increments one hourly
 `ViewStat` bucket and the popularity counter. The Editor Canvas graph marks the
 initial publication and updates and compares views in the 24 hours around each
-update. Editor-only statistics CRUD is under `/editor/analytics/:id/stats`.
+update. Editor-only statistics CRUD is under `/editor/analytics/:id/stats`
+and is available from the statistics table on each analytics page.
 
-Open-Meteo responses are cached on the server for less than 15 minutes.
-Concurrent callers share a single external request, and expired data is hidden
-if a refresh fails.
+Open-Meteo responses are cached on the server for five minutes. Concurrent
+callers share a single external request. If a refresh fails, data younger than
+15 minutes is still served and the service is retried after a minute; older
+data is never shown. The widget displays when the data was last updated.
 
 ## Validation, errors and logging
 
@@ -119,7 +124,9 @@ Server routes validate IDs, types, lengths, cursors, ownership, roles, and legal
 workflow transitions. EJS escaped output and DOM `textContent` protect article
 and comment text. Central error middleware handles malformed JSON, validation,
 conflicts, database failures, 404s, and unexpected errors without exposing
-production stack traces.
+production stack traces. Browsers receive a styled error page with a way back,
+API clients receive JSON, and signed-out visitors to protected pages are sent
+to the login page.
 
 The built-in logger writes JSON lines to the console and daily files in `logs/`.
 It records operational events and errors using allowlisted metadata. Passwords,

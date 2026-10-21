@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Article = require('../models/Article');
 const viewStatsService = require('../services/viewStatsService');
+const { respond } = require('../middleware/errorMiddleware');
 
 function articleTitle(article) {
   return article.publishedVersion?.title || article.workingVersion?.title || 'Untitled article';
@@ -27,7 +28,7 @@ async function findArticleForAnalytics(id) {
 exports.getAnalyticsPage = async (req, res, next) => {
   try {
     const { article, error, message } = await findArticleForAnalytics(req.params.id);
-    if (error) return res.status(error).send(message);
+    if (error) return respond(req, res, error, message);
 
     return res.render('editor/analytics', {
       pageTitle: 'Article Analytics',
