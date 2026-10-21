@@ -223,6 +223,7 @@ PATCH, PUT or DELETE.
 | DELETE | `/editor/articles/:id` | Delete an article | Editor |
 | POST | `/editor/users` | Create a user | Editor |
 | PATCH / DELETE | `/editor/users/:id` | Edit / delete a user | Editor |
+| GET | `/editor/analytics/:id/data` | Graph data: views over time, total views and approval markers | Editor |
 | GET / POST | `/editor/analytics/:id/stats` | List / add view statistics | Editor |
 | GET / PATCH / DELETE | `/editor/analytics/:id/stats/:statId` | Read / edit / delete view statistics | Editor |
 
