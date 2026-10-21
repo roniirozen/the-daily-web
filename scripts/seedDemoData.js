@@ -7,8 +7,8 @@ const User = require('../models/User');
 const ViewStat = require('../models/ViewStat');
 const { hashPassword } = require('../utils/password');
 const logger = require('../utils/logger');
+const { MONGO_URI } = require('../config/mongoUri');
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/web-daily-demo';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
 const NOW = new Date();
@@ -364,16 +364,21 @@ function printCredentials() {
   }
 }
 
+// A refusal has a fixed message that is safe to print as it is.
+class SeedRefusedError extends Error {}
+
 async function seedDemoData() {
-  if (process.env.DEMO_SEED !== 'true') {
-    throw new Error(
-      'Demo seed cancelled. Set DEMO_SEED=true to confirm replacement of existing demo records.'
+  // "npm run seed" passes --confirm; running the script directly needs
+  // --confirm or DEMO_SEED=true, so demo records are never replaced by accident.
+  if (!process.argv.includes('--confirm') && process.env.DEMO_SEED !== 'true') {
+    throw new SeedRefusedError(
+      'Demo seed cancelled. Run "npm run seed" to confirm replacement of existing demo records.'
     );
   }
 
   const databaseName = decodeURIComponent(MONGO_URI.match(/^mongodb(?:\+srv)?:\/\/[^/]+\/([^?]+)(?:\?|$)/)?.[1] || '');
   if (!/^(web-daily-demo(?:-[a-z0-9]+)?|daily_web_test_[a-f0-9]+)$/.test(databaseName)) {
-    throw new Error('Use a web-daily-demo database (or an isolated daily_web_test_ database).');
+    throw new SeedRefusedError('Use a web-daily-demo database (or an isolated daily_web_test_ database).');
   }
 
   await mongoose.connect(MONGO_URI);
@@ -439,6 +444,7 @@ async function seedDemoData() {
 }
 
 seedDemoData().catch(error => {
-  logger.error('Demo seed failed; check DEMO_SEED and the demo database name', { error });
+  if (error instanceof SeedRefusedError) console.error(error.message);
+  else logger.error('Demo seed failed; check that MongoDB is running', { error });
   process.exitCode = 1;
 });

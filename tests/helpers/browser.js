@@ -9,6 +9,9 @@ async function openBrowser() {
   const executable = [process.env.BROWSER_PATH,
     'C:/Program Files/Google/Chrome/Application/chrome.exe',
     'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+    '/Applications/Chromium.app/Contents/MacOS/Chromium',
     '/usr/bin/chromium', '/usr/bin/google-chrome'].find(candidate => candidate && fs.existsSync(candidate));
   if (!executable) throw new Error('Set BROWSER_PATH to an installed Chromium browser');
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'daily-web-browser-'));

@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node app.js",
     "dev": "node --watch app.js",
-    "seed": "node scripts/seedDemoData.js",
+    "seed": "node scripts/seedDemoData.js --confirm",
     "verify-demo": "node scripts/verifyDemoData.js",
     "check": "node scripts/checkProject.js",
     "test": "node --test tests/application.test.js tests/operations.test.js tests/errors.test.js tests/weather.test.js tests/seed.test.js",

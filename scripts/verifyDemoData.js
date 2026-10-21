@@ -4,8 +4,8 @@ const User = require('../models/User');
 const ViewStat = require('../models/ViewStat');
 const Comment = require('../models/Comment');
 const logger = require('../utils/logger');
+const { MONGO_URI } = require('../config/mongoUri');
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/web-daily-demo';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const INFINITE_SCROLL_MINIMUM = 60;
 
