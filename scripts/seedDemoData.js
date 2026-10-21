@@ -32,13 +32,23 @@ const CATEGORIES = [
 ];
 
 const DEMO_USERS = [
-  { username: 'demo_reporter_1', password: 'DemoReporter!2026', role: 'reporter' },
-  { username: 'demo_reporter_2', password: 'DemoReporter!2026', role: 'reporter' },
-  { username: 'demo_reporter_3', password: 'DemoReporter!2026', role: 'reporter' },
-  { username: 'demo_reporter_4', password: 'DemoReporter!2026', role: 'reporter' },
-  { username: 'demo_editor_1', password: 'DemoEditor!2026', role: 'editor' },
-  { username: 'demo_editor_2', password: 'DemoEditor!2026', role: 'editor' }
+  { username: 'demo_reporter_1', role: 'reporter' },
+  { username: 'demo_reporter_2', role: 'reporter' },
+  { username: 'demo_reporter_3', role: 'reporter' },
+  { username: 'demo_reporter_4', role: 'reporter' },
+  { username: 'demo_editor_1', role: 'editor' },
+  { username: 'demo_editor_2', role: 'editor' }
 ];
+
+// No password is stored in the repository. Every seed run generates new
+// passwords (one shared by the Reporters, one by the Editors), stores only
+// their scrypt hashes and prints them once to the terminal.
+function generateDemoPasswords() {
+  return {
+    reporter: crypto.randomBytes(12).toString('base64url'),
+    editor: crypto.randomBytes(12).toString('base64url')
+  };
+}
 
 const SUBJECTS = [
   'community solar projects',
@@ -335,9 +345,9 @@ async function removePreviousDemoData() {
   await User.deleteMany({ _id: { $in: previousUserIds } });
 }
 
-async function createDemoUsers() {
+async function createDemoUsers(passwords) {
   const users = await Promise.all(DEMO_USERS.map(async credentials => {
-    const { salt, hash } = await hashPassword(credentials.password);
+    const { salt, hash } = await hashPassword(passwords[credentials.role]);
     return {
       _id: new mongoose.Types.ObjectId(),
       username: credentials.username,
@@ -357,10 +367,11 @@ async function insertInBatches(Model, documents, batchSize = 4000) {
   }
 }
 
-function printCredentials() {
-  console.log('\nDEMO ACCOUNTS — fake local accounts only; demo-only passwords are documented in README');
+// Printed to the terminal only, never to the log files.
+function printCredentials(passwords) {
+  console.log('\nDEMO ACCOUNTS — new passwords on every seed run; previous ones no longer work');
   for (const user of DEMO_USERS) {
-    console.log(`  ${user.role.toUpperCase()}: ${user.username}`);
+    console.log(`  ${user.role.padEnd(8)}  ${user.username.padEnd(16)}  password: ${passwords[user.role]}`);
   }
 }
 
@@ -392,7 +403,8 @@ async function seedDemoData() {
     }
     await Promise.all([User, Article, Comment, Session, ViewStat].map(Model => Model.init()));
     await removePreviousDemoData();
-    const users = await createDemoUsers();
+    const passwords = generateDemoPasswords();
+    const users = await createDemoUsers(passwords);
     const reporters = users.filter(user => user.role === 'reporter');
     const editors = users.filter(user => user.role === 'editor');
     const totalArticleCount = Object.values(ARTICLE_COUNTS).reduce((sum, count) => sum + count, 0);
@@ -437,7 +449,7 @@ async function seedDemoData() {
     console.log(`  Total represented views: ${totalViews}`);
     console.log(`  Comments: ${comments.length}`);
     console.log(`  Categories: ${CATEGORIES.join(', ')}`);
-    printCredentials();
+    printCredentials(passwords);
   } finally {
     await mongoose.disconnect();
   }

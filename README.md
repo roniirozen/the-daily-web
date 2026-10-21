@@ -91,7 +91,7 @@ folder:
 
 ```sh
 npm install     # install express, mongoose and ejs
-npm run seed    # load the demo data (first time, or to reset it)
+npm run seed    # load the demo data and print the demo passwords
 npm start       # start the server
 ```
 
@@ -145,14 +145,26 @@ articles that were updated after publication (48 of them at least twice).
 `npm run verify-demo` checks these counts and the integrity of users, password
 hashes, publication history, comments and statistics.
 
-Demo-only credentials:
+### Demo accounts
 
-| Role | Username | Password |
-| --- | --- | --- |
-| Reporter | `demo_reporter_1` through `demo_reporter_4` | `DemoReporter!2026` |
-| Editor | `demo_editor_1` and `demo_editor_2` | `DemoEditor!2026` |
+| Role | Usernames |
+| --- | --- |
+| Reporter | `demo_reporter_1` through `demo_reporter_4` |
+| Editor | `demo_editor_1` and `demo_editor_2` |
 
-Never use these demo passwords outside a disposable local database.
+No password is stored in the repository. Each run of `npm run seed` generates
+new passwords (one for all Reporters, one for all Editors), saves only their
+hashes in the database and prints them once at the end of its output:
+
+```text
+DEMO ACCOUNTS — new passwords on every seed run; previous ones no longer work
+  reporter  demo_reporter_1   password: <generated>
+  ...
+  editor    demo_editor_1     password: <generated>
+```
+
+Copy them from the terminal. Running the seed again resets the demo data and
+replaces the passwords.
 
 ## Article workflow
 
