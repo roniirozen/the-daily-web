@@ -4,6 +4,7 @@ const Comment = require('../models/Comment');
 const ViewStat = require('../models/ViewStat');
 const logger = require('../utils/logger');
 const { validateArticleInput } = require('../utils/articleValidation');
+const { escapeRegex } = require('../utils/escapeRegex');
 
 const statuses = ['draft', 'pending', 'published', 'returned'];
 const fields = ['title', 'summary', 'content', 'imageUrl', 'category'];
@@ -60,7 +61,7 @@ exports.getDashboard = async (req, res, next) => {
       return res.status(400).send('Invalid article search or page.');
     }
     const filter = status ? { status } : {};
-    if (search.trim()) filter['workingVersion.title'] = { $regex: search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
+    if (search.trim()) filter['workingVersion.title'] = { $regex: escapeRegex(search.trim()), $options: 'i' };
     const total = await Article.countDocuments(filter);
     const totalPages = Math.max(1, Math.ceil(total / 20));
     const page = Math.min(Number(pageValue), totalPages);

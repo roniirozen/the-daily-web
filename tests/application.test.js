@@ -208,6 +208,12 @@ test('release HTTP matrix against isolated MongoDB', { timeout: 120000 }, async 
     assert.equal(combined.articles.length, 20);
     assert(combined.articles.every(article => article.category === 'Science' && viewedIds.includes(article.id)));
     assert(combined.articles.every((article, i, rows) => !i || rows[i - 1].totalViews >= article.totalViews));
+    const partial = (await request('/api/feed?q=' + encodeURIComponent('aLcOn rep'), 200)).data;
+    assert.equal(partial.articles.length, 20);
+    assert(partial.articles.every(article => article.title.startsWith('Falcon report')));
+    const phrase = (await request('/api/feed?q=' + encodeURIComponent('Falcon report 1999'), 200)).data;
+    assert.deepEqual(phrase.articles.map(article => article.title), ['Falcon report 1999']);
+    assert.equal((await request('/api/feed?q=' + encodeURIComponent('.*'), 200)).data.articles.length, 0);
     const unviewed = (await request('/api/feed?viewed=unviewed&viewedIds=' + viewedIds.join(','), 200)).data;
     assert(unviewed.articles.every(article => !viewedIds.includes(article.id)));
     await request('/api/feed?sort=invalid', 400);

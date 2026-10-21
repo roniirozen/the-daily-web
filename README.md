@@ -100,8 +100,8 @@ from stale concurrent writes.
 ## Feed, analytics and weather
 
 The feed reads exactly 20 articles at a time with MongoDB cursor pagination.
-Search covers approved titles; category, viewed/unviewed, publication date, and
-popularity criteria can be combined. Viewed state uses the shared
+Search matches any part of approved titles, ignoring case; category,
+viewed/unviewed, publication date, and popularity criteria can be combined. Viewed state uses the shared
 `dailyWebViewedArticles` localStorage key and tolerates unavailable storage.
 
 Every successful public article response atomically increments one hourly
