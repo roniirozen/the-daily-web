@@ -31,7 +31,11 @@
 
       <nav class="main-nav">
         <a href="/">Home</a>
-        <a href="/login">Reporter / Editor Login</a>
+        <% if (currentUser) { %>
+          <a href="<%= currentUser.role === 'editor' ? '/editor' : '/reporter' %>">My workspace</a>
+        <% } else { %>
+          <a href="/login">Reporter / Editor Login</a>
+        <% } %>
       </nav>
 
     </div>
@@ -125,9 +129,7 @@
 
                 </div>
 
-                <p class="comment-content">
-                  <%= comment.content %>
-                </p>
+                <p class="comment-content"><%= comment.content %></p>
 
               </article>
 
@@ -153,6 +155,7 @@
           id="comment-form"
           class="comment-form"
           data-article-id="<%= article._id %>"
+          data-can-moderate="<%= canModerate ? 'true' : 'false' %>"
         >
 
           <div class="form-group">

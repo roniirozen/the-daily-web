@@ -8,3 +8,12 @@
 .legend-swatch.views { background: #245b92; }
 .legend-swatch.initial { background: #17653f; }
 .legend-swatch.update { background: #b88720; }
+.stats-create { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1rem; margin: 1rem 0 .5rem; }
+.stats-create label { display: block; font-weight: bold; margin-bottom: .3rem; }
+.stats-create input { width: auto; margin-bottom: 0; }
+.stats-message { min-height: 1.5rem; margin: 0 0 .75rem; }
+.stats-message[data-state="error"] { color: #a42d32; }
+.stats-message[data-state="success"] { color: #17653f; }
+.panel .stats-count { width: 9rem; margin: 0; }
+.stats-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.editor-page .stats-actions button { padding: .45rem .8rem; }

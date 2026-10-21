@@ -23,7 +23,14 @@ exports.getArticle = async (req, res, next) => {
     }
 
     const { comments, nextCursor } = await getCommentPage(article._id);
-    res.render('public/article', { article, comments, nextCommentsCursor: nextCursor });
+    res.render('public/article', {
+      article,
+      comments,
+      nextCommentsCursor: nextCursor,
+      currentUser: req.currentUser,
+      // Only shows the controls. The comment API checks the Editor role itself.
+      canModerate: req.currentUser?.role === 'editor'
+    });
   } catch (error) {
     next(error);
   }

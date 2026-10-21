@@ -10,6 +10,9 @@
 
   const PADDING = { top: 24, right: 24, bottom: 48, left: 56 };
 
+  // Replaced on every load so a resize always redraws the latest data.
+  let redrawChart = null;
+
   async function loadData() {
     const url = window.__ANALYTICS_DATA_URL__;
     const response = await fetch(url, { headers: { Accept: 'application/json' } });
@@ -179,20 +182,20 @@
       if (!data.timeline || !data.timeline.length) {
         if (emptyState) emptyState.hidden = false;
         if (wrapper) wrapper.hidden = true;
+        redrawChart = null;
         return;
       }
 
       if (emptyState) emptyState.hidden = true;
       if (wrapper) wrapper.hidden = false;
-      const redraw = () => {
+      redrawChart = () => {
         // Match drawing coordinates to the displayed width so mobile labels
         // stay readable rather than shrinking a 960px bitmap to phone width.
         canvas.width = Math.max(250, Math.floor(canvas.clientWidth));
         canvas.height = 360;
         drawChart(canvas, data.timeline, data.publicationHistory || []);
       };
-      redraw();
-      window.addEventListener('resize', redraw);
+      redrawChart();
     } catch (error) {
       if (emptyState) {
         emptyState.hidden = false;
@@ -204,4 +207,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', init);
+  window.addEventListener('resize', () => { if (redrawChart) redrawChart(); });
+  // The statistics table below the chart announces every change it saves.
+  window.addEventListener('analytics:changed', init);
 })();

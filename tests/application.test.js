@@ -113,6 +113,10 @@ test('release HTTP matrix against isolated MongoDB', { timeout: 120000 }, async 
 
   await t.test('Comment CRUD, rolling rate limit, header spoofing and pagination', async () => {
     const route = '/api/articles/' + t.articleId + '/comments';
+    assert((await request('/articles/' + t.articleId, 200)).text.includes('data-can-moderate="false"'));
+    assert((await request('/articles/' + t.articleId, 200, { cookie: reporterCookie })).text.includes('data-can-moderate="false"'));
+    assert((await request('/articles/' + t.articleId, 200, { cookie: editorCookie })).text.includes('data-can-moderate="true"'));
+    assert((await request('/editor/analytics/' + t.articleId, 200, { cookie: editorCookie })).text.includes('id="stats-rows"'));
     await request(route, 400, { method: 'POST', body: { authorName: [], content: 'Invalid author' } });
     const commentIds = [];
     for (let i = 0; i < 3; i++) commentIds.push((await request(route, 201, { method: 'POST', body: { authorName: 'Guest', content: 'Comment ' + i } })).data.comment._id);

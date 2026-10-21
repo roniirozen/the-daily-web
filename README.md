@@ -70,9 +70,10 @@ Never use these demo passwords outside a disposable local database.
 - Reporters create incomplete drafts, use automatic server saves, edit only
   their own articles, submit work, read correction notes, and resubmit.
 - Editors search/filter and edit all articles, approve pending submissions or
-  return them with a required note, delete articles, manage users, moderate
-  comments, and inspect or administer view statistics. An Editor's change to
-  a published article becomes a pending update that still needs approval.
+  return them with a required note, delete articles, manage users, edit or
+  delete comments from the article page, and inspect or administer view
+  statistics. An Editor's change to a published article becomes a pending
+  update that still needs approval.
 
 Passwords use Node `scrypt` with random salts. Random session tokens are stored
 in MongoDB only as SHA-256 hashes. HTTP-only SameSite cookies carry the raw
@@ -108,7 +109,8 @@ viewed/unviewed, publication date, and popularity criteria can be combined. View
 Every successful public article response atomically increments one hourly
 `ViewStat` bucket and the popularity counter. The Editor Canvas graph marks the
 initial publication and updates and compares views in the 24 hours around each
-update. Editor-only statistics CRUD is under `/editor/analytics/:id/stats`.
+update. Editor-only statistics CRUD is under `/editor/analytics/:id/stats`
+and is available from the statistics table on each analytics page.
 
 Open-Meteo responses are cached on the server for less than 15 minutes.
 Concurrent callers share a single external request, and expired data is hidden
