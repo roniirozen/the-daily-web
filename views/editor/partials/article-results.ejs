@@ -1,0 +1,29 @@
+<p class="muted results-summary" data-results-summary><%= total %> article<%= total === 1 ? '' : 's' %><%= totalPages > 1 ? ' · page ' + page + ' of ' + totalPages : '' %></p>
+<% if (!articles.length) { %>
+  <section class="panel empty"><h2>No articles here yet</h2><p>No article matches this title and status. Try another search or filter.</p><a href="/editor" data-results-link>View all articles</a></section>
+<% } else { %>
+  <div class="table-scroll">
+    <table>
+      <caption class="sr-only">Newsroom articles, most recently updated first</caption>
+      <thead><tr><th scope="col">Article</th><th scope="col">Reporter</th><th scope="col">Status</th><th scope="col">Public version</th><th scope="col">Last updated</th><th scope="col">Action</th></tr></thead>
+      <tbody>
+        <% articles.forEach(article => { %>
+          <tr>
+            <th scope="row"><%= article.workingVersion?.title || 'Untitled article' %><small><%= article.workingVersion?.category || 'Uncategorized' %></small></th>
+            <td><%= article.reporter?.username || 'Reporter unavailable' %></td>
+            <td><span class="badge <%= article.status %>"><%= statusLabels[article.status] %></span></td>
+            <td><%= article.publishedVersion ? 'Published version live' : 'Not published' %></td>
+            <td><time datetime="<%= article.updatedAt.toISOString() %>"><%= article.updatedAt.toLocaleString('en-GB') %></time></td>
+            <td><a class="review-link" href="/editor/articles/<%= article._id %>">Review<span class="sr-only"> <%= article.workingVersion?.title || 'Untitled article' %></span> &rarr;</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <nav class="pagination" aria-label="Article pages">
+    <% const criteria = 'status=' + encodeURIComponent(selectedStatus) + '&search=' + encodeURIComponent(search); %>
+    <% if (page > 1) { %><a href="/editor?<%= criteria %>&amp;page=<%= page - 1 %>" data-results-link>Previous</a><% } %>
+    <span>Page <%= page %> of <%= totalPages %></span>
+    <% if (page < totalPages) { %><a href="/editor?<%= criteria %>&amp;page=<%= page + 1 %>" data-results-link>Next</a><% } %>
+  </nav>
+<% } %>

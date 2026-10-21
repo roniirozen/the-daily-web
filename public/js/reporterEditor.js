@@ -14,6 +14,12 @@ if (editorForm) {
   let timer;
   let unprotectedRequest = false;
 
+  function showStatus(status, label) {
+    statusLabel.dataset.status = status;
+    statusLabel.className = 'status-badge status-' + status;
+    statusLabel.textContent = label;
+  }
+
   function readFields() {
     const values = {};
     for (const name of ['title', 'summary', 'content', 'imageUrl', 'category']) {
@@ -54,14 +60,14 @@ if (editorForm) {
         saveMessage.textContent = 'Saving...';
         try {
           const result = articleId
-            ? await request('/reporter/articles/' + articleId + '/autosave', 'PATCH', readFields())
+            ? await request('/reporter/articles/' + articleId, 'PATCH', readFields())
             : await request('/reporter/articles', 'POST', readFields());
           if (!articleId) {
             articleId = result.articleId;
             editorForm.dataset.articleId = articleId;
             history.replaceState(null, '', '/reporter/articles/' + articleId + '/edit');
           }
-          statusLabel.textContent = result.status || 'draft';
+          showStatus(result.status, result.statusLabel);
           saveMessage.textContent = 'Saved';
         } catch (error) {
           dirty = true;
@@ -99,9 +105,9 @@ if (editorForm) {
     try {
       // Flush the last debounce and wait for all edits before changing status.
       await saveChanges();
-      await request('/reporter/articles/' + articleId + '/submit', 'POST');
+      const result = await request('/reporter/articles/' + articleId + '/status', 'PATCH', { status: 'pending' });
       blocked = true;
-      statusLabel.textContent = 'pending';
+      showStatus(result.status, result.statusLabel);
       document.getElementById('pending-notice').hidden = false;
       saveMessage.textContent = 'Saved';
       submitMessage.textContent = 'Submitted for editor approval.';

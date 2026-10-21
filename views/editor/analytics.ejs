@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="/css/analytics.css">
 </head>
 <body class="editor-page">
-  <header class="masthead"><a class="brand" href="/">The Daily Web</a><span>Editorial desk</span></header>
+  <%- include('../partials/editor-header', { navSection: 'articles' }) %>
   <main>
     <div class="page-heading">
       <p class="eyebrow">Newsroom / Analytics</p>
@@ -21,7 +21,7 @@
       <div class="analytics-summary">
         <div>
           <p class="eyebrow">Status</p>
-          <span class="badge <%= article.status %>"><%= article.status %></span>
+          <span class="badge <%= article.status %>"><%= statusLabels[article.status] %></span>
         </div>
         <div>
           <p class="eyebrow">Total views</p>

@@ -1,0 +1,10 @@
+<header class="site-header">
+  <div class="container header-content">
+    <a href="/" class="logo">The Daily Web</a>
+    <nav class="main-nav" aria-label="Reporter navigation">
+      <a href="/reporter" <%- locals.navCurrent === 'articles' ? 'aria-current="page"' : '' %>>My articles</a>
+      <a href="/">Public site</a>
+      <form method="POST" action="/logout"><button type="submit" class="text-button">Sign out</button></form>
+    </nav>
+  </div>
+</header>

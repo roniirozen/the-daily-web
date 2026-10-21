@@ -3,7 +3,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 const logger = require('./utils/logger');
-const indexRoutes = require('./routes');
 const publicRoutes = require('./routes/publicRoutes');
 const authRoutes = require('./routes/authRoutes');
 const reporterRoutes = require('./routes/reporterRoutes');
@@ -12,6 +11,8 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 const feedRoutes = require('./routes/feedRoutes');
 const weatherRoutes = require('./routes/weatherRoutes');
 const { loadCurrentUser } = require('./middleware/authMiddleware');
+const { methodOverride } = require('./middleware/methodOverride');
+const { STATUS_LABELS } = require('./utils/articleWorkflow');
 const { notFound, errorHandler, logServerResponses } = require('./middleware/errorMiddleware');
 
 const app = express();
@@ -19,14 +20,15 @@ const PORT = process.env.PORT || 3000;
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+app.locals.statusLabels = STATUS_LABELS;
 
 app.use(express.urlencoded({ extended: true, limit: '512kb' }));
 app.use(express.json({ limit: '512kb' }));
+app.use(methodOverride);
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(logServerResponses);
 app.use(loadCurrentUser);
-app.use('/', indexRoutes);
 app.use('/', publicRoutes);
 app.use('/', authRoutes);
 app.use('/reporter', reporterRoutes);

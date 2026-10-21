@@ -24,14 +24,10 @@ router.post('/articles', reporterController.createArticle);
 
 router.get('/articles/:id/edit', reporterController.getEditArticle);
 
-router.patch(
-  '/articles/:id/autosave',
-  reporterController.autosaveArticle
-);
+// Autosave sends only the changed fields of the article's working version.
+router.patch('/articles/:id', reporterController.autosaveArticle);
 
-router.post(
-  '/articles/:id/submit',
-  reporterController.submitForReview
-);
+// Submitting for approval changes the article's status to "pending".
+router.patch('/articles/:id/status', reporterController.submitForReview);
 
 module.exports = router;

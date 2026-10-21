@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="/css/editor.css">
 </head>
 <body class="editor-page">
-  <header class="masthead"><a class="brand" href="/">The Daily Web</a><a href="/editor/users">&larr; User administration</a></header>
+  <%- include('../partials/editor-header', { navSection: 'users' }) %>
   <main>
     <div class="page-heading"><p class="eyebrow">Newsroom / Account details</p><h1><%= user.username %><%= isSelf ? ' (you)' : '' %></h1><p>Created <time datetime="<%= user.createdAt.toISOString() %>"><%= user.createdAt.toLocaleString('en-GB') %></time> &middot; Updated <time datetime="<%= user.updatedAt.toISOString() %>"><%= user.updatedAt.toLocaleString('en-GB') %></time></p></div>
     <section class="panel account-form">
       <h2>Account settings</h2>
       <% if (errorMessage) { %><div class="form-error" role="alert"><p><%= errorMessage %></p><a href="/editor/users/<%= user._id %>/edit">Reload current account details</a></div><% } %>
-      <form action="/editor/users/<%= user._id %>/edit" method="post">
+      <form action="/editor/users/<%= user._id %>" method="post">
+        <input type="hidden" name="_method" value="PATCH">
         <input type="hidden" name="revision" value="<%= values.revision %>">
         <label for="username">Username</label><input id="username" name="username" value="<%= values.username %>" minlength="3" maxlength="60" pattern="[a-zA-Z0-9_.\-]{3,60}" autocomplete="off" aria-describedby="username-help" required>
         <p id="username-help" class="field-help">3–60 letters, numbers, dots, underscores or hyphens. Stored in lowercase.</p>
@@ -28,7 +29,8 @@
     <section class="panel danger-zone account-form"><h2>Delete account</h2>
       <% if (isSelf) { %><p>Your active account cannot be deleted.</p><% } else { %>
         <p>Deletion is permanent. Accounts referenced by articles or approval history cannot be deleted. The last Editor is also protected.</p>
-        <details><summary>Show delete confirmation</summary><form action="/editor/users/<%= user._id %>/delete" method="post">
+        <details><summary>Show delete confirmation</summary><form action="/editor/users/<%= user._id %>" method="post">
+          <input type="hidden" name="_method" value="DELETE">
           <input type="hidden" name="revision" value="<%= user.updatedAt.toISOString() %>">
           <label for="confirmation">Type <strong><%= user.username %></strong> to confirm</label><input id="confirmation" name="confirmation" autocomplete="off" required>
           <button class="danger" type="submit">Permanently delete account</button>

@@ -59,32 +59,32 @@ test('release HTTP matrix against isolated MongoDB', { timeout: 120000 }, async 
     const route = '/reporter/articles/' + id;
     assert.equal(String((await Article.findById(id)).reporter), String(reporter._id));
     await request('/articles/' + id, 404);
-    await request(route + '/autosave', 404, { cookie: otherCookie, method: 'PATCH', body: { title: 'Stolen' } });
-    await request(route + '/autosave', 200, { cookie: reporterCookie, method: 'PATCH', body: { content: 'Saved incomplete text' } });
+    await request(route, 404, { cookie: otherCookie, method: 'PATCH', body: { title: 'Stolen' } });
+    await request(route, 200, { cookie: reporterCookie, method: 'PATCH', body: { content: 'Saved incomplete text' } });
     assert((await request(route + '/edit', 200, { cookie: reporterCookie })).text.includes('Saved incomplete text'));
-    await request(route + '/submit', 400, { cookie: reporterCookie, method: 'POST' });
+    await request(route + '/status', 400, { cookie: reporterCookie, method: 'PATCH', body: { status: 'pending' } });
     const version = { title: 'Approved original headline', summary: 'Original summary', content: '<script>window.exposed=true</script> public body', category: 'Science', imageUrl: '' };
-    await request(route + '/autosave', 200, { cookie: reporterCookie, method: 'PATCH', body: version });
-    await request(route + '/submit', 200, { cookie: reporterCookie, method: 'POST' });
-    await request(route + '/autosave', 409, { cookie: reporterCookie, method: 'PATCH', body: { title: 'Illegal edit' } });
+    await request(route, 200, { cookie: reporterCookie, method: 'PATCH', body: version });
+    await request(route + '/status', 200, { cookie: reporterCookie, method: 'PATCH', body: { status: 'pending' } });
+    await request(route, 409, { cookie: reporterCookie, method: 'PATCH', body: { title: 'Illegal edit' } });
     let article = await Article.findById(id);
     const review = '/editor/articles/' + id;
-    await request(review + '/return', 400, { cookie: editorCookie, method: 'POST', body: { revision: article.updatedAt.toISOString(), editorNote: '' } });
-    await request(review + '/return', 303, { cookie: editorCookie, method: 'POST', body: { revision: article.updatedAt.toISOString(), editorNote: 'Explain the source.' } });
+    await request(review + '/status', 400, { cookie: editorCookie, method: 'PATCH', body: { status: 'returned', revision: article.updatedAt.toISOString(), editorNote: '' } });
+    await request(review + '/status', 303, { cookie: editorCookie, method: 'PATCH', body: { status: 'returned', revision: article.updatedAt.toISOString(), editorNote: 'Explain the source.' } });
     assert((await request(route + '/edit', 200, { cookie: reporterCookie })).text.includes('Explain the source.'));
-    await request(route + '/autosave', 200, { cookie: reporterCookie, method: 'PATCH', body: { summary: 'Sources added' } });
-    await request(route + '/submit', 200, { cookie: reporterCookie, method: 'POST' });
+    await request(route, 200, { cookie: reporterCookie, method: 'PATCH', body: { summary: 'Sources added' } });
+    await request(route + '/status', 200, { cookie: reporterCookie, method: 'PATCH', body: { status: 'pending' } });
     article = await Article.findById(id);
     const oldRevision = article.updatedAt.toISOString();
-    await request(review + '/edit', 303, { cookie: editorCookie, method: 'POST', body: { ...version, revision: oldRevision } });
-    await request(review + '/approve', 409, { cookie: editorCookie, method: 'POST', body: { revision: oldRevision } });
+    await request(review, 303, { cookie: editorCookie, method: 'PATCH', body: { ...version, revision: oldRevision } });
+    await request(review + '/status', 409, { cookie: editorCookie, method: 'PATCH', body: { status: 'published', revision: oldRevision } });
     article = await Article.findById(id);
-    await request(review + '/approve', 303, { cookie: editorCookie, method: 'POST', body: { revision: article.updatedAt.toISOString() } });
+    await request(review + '/status', 303, { cookie: editorCookie, method: 'PATCH', body: { status: 'published', revision: article.updatedAt.toISOString() } });
     const page = await request('/articles/' + id, 200);
     assert(page.text.includes('&lt;script&gt;')); assert(!page.text.includes('<script>window.exposed'));
-    await request(route + '/autosave', 200, { cookie: reporterCookie, method: 'PATCH', body: { title: 'New revised headline' } });
+    await request(route, 200, { cookie: reporterCookie, method: 'PATCH', body: { title: 'New revised headline' } });
     assert((await request('/articles/' + id, 200)).text.includes('Approved original headline'));
-    await request(route + '/submit', 200, { cookie: reporterCookie, method: 'POST' });
+    await request(route + '/status', 200, { cookie: reporterCookie, method: 'PATCH', body: { status: 'pending' } });
     const submitted = await Article.findById(id);
     assert(!(await request('/articles/' + id, 200)).text.includes('New revised headline'));
     // Views are recorded after the response; a view must not change the revision.
@@ -94,20 +94,20 @@ test('release HTTP matrix against isolated MongoDB', { timeout: 120000 }, async 
     article = await Article.findById(id);
     assert(article.totalViews > submitted.totalViews);
     assert.equal(article.updatedAt.toISOString(), submitted.updatedAt.toISOString());
-    await request(review + '/approve', 303, { cookie: editorCookie, method: 'POST', body: { revision: article.updatedAt.toISOString() } });
+    await request(review + '/status', 303, { cookie: editorCookie, method: 'PATCH', body: { status: 'published', revision: article.updatedAt.toISOString() } });
     assert((await request('/articles/' + id, 200)).text.includes('New revised headline'));
     article = await Article.findById(id);
     assert.deepEqual(article.publicationHistory.map(entry => entry.type), ['initial', 'update']);
-    await request(review + '/approve', 409, { cookie: editorCookie, method: 'POST', body: { revision: article.updatedAt.toISOString() } });
+    await request(review + '/status', 409, { cookie: editorCookie, method: 'PATCH', body: { status: 'published', revision: article.updatedAt.toISOString() } });
     const live = { ...article.publishedVersion.toObject(), content: article.publishedVersion.content.replace(/\n/g, '\r\n') };
-    await request(review + '/edit', 303, { cookie: editorCookie, method: 'POST', body: { ...live, revision: article.updatedAt.toISOString() } });
+    await request(review, 303, { cookie: editorCookie, method: 'PATCH', body: { ...live, revision: article.updatedAt.toISOString() } });
     article = await Article.findById(id);
     assert.equal(article.status, 'published');
-    await request(review + '/edit', 303, { cookie: editorCookie, method: 'POST', body: { ...live, title: 'Editor correction', revision: article.updatedAt.toISOString() } });
+    await request(review, 303, { cookie: editorCookie, method: 'PATCH', body: { ...live, title: 'Editor correction', revision: article.updatedAt.toISOString() } });
     article = await Article.findById(id);
     assert.equal(article.status, 'pending');
     assert((await request('/articles/' + id, 200)).text.includes('New revised headline'));
-    await request(review + '/approve', 303, { cookie: editorCookie, method: 'POST', body: { revision: article.updatedAt.toISOString() } });
+    await request(review + '/status', 303, { cookie: editorCookie, method: 'PATCH', body: { status: 'published', revision: article.updatedAt.toISOString() } });
     assert((await request('/articles/' + id, 200)).text.includes('Editor correction'));
   });
 
@@ -149,14 +149,14 @@ test('release HTTP matrix against isolated MongoDB', { timeout: 120000 }, async 
     const created = await request('/reporter/articles', 201, { cookie: reporterCookie, method: 'POST', body: { title: 'Concurrent story', summary: 'Valid summary', content: 'Valid body', category: 'Science' } });
     const route = '/reporter/articles/' + created.data.articleId;
     const results = await Promise.all([
-      fetch(base + route + '/autosave', { method: 'PATCH', headers: { cookie: reporterCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ content: 'Latest concurrent content' }) }),
-      fetch(base + route + '/submit', { method: 'POST', headers: { cookie: reporterCookie } })
+      fetch(base + route, { method: 'PATCH', headers: { cookie: reporterCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ content: 'Latest concurrent content' }) }),
+      fetch(base + route + '/status', { method: 'PATCH', headers: { cookie: reporterCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'pending' }) })
     ]);
     for (const response of results) { assert([200, 409].includes(response.status)); await response.text(); }
-    if ((await Article.findById(created.data.articleId)).status !== 'pending') await request(route + '/submit', 200, { method: 'POST', cookie: reporterCookie });
+    if ((await Article.findById(created.data.articleId)).status !== 'pending') await request(route + '/status', 200, { method: 'PATCH', cookie: reporterCookie, body: { status: 'pending' } });
     const pending = await Article.findById(created.data.articleId);
     assert.equal(pending.status, 'pending'); assert(pending.workingVersion.content); assert.equal(pending.publishedVersion, null);
-    await request(route + '/autosave', 409, { method: 'PATCH', cookie: reporterCookie, body: { content: 'Too late' } });
+    await request(route, 409, { method: 'PATCH', cookie: reporterCookie, body: { content: 'Too late' } });
   });
 
   await t.test('Editor User CRUD, password reset and account guards', async () => {
@@ -168,16 +168,16 @@ test('release HTTP matrix against isolated MongoDB', { timeout: 120000 }, async 
     const list = (await request('/editor/users?search=new_', 200, { cookie: editorCookie })).text;
     assert(list.includes('new_reporter')); assert(!list.includes(user.passwordHash)); assert(!list.includes(user.passwordSalt));
     const newPassword = password + '-reset';
-    await request('/editor/users/' + id + '/edit', 303, { cookie: editorCookie, method: 'POST', body: { username: 'renamed_editor', role: 'editor', password: newPassword, revision: user.updatedAt.toISOString() } });
+    await request('/editor/users/' + id, 303, { cookie: editorCookie, method: 'PATCH', body: { username: 'renamed_editor', role: 'editor', password: newPassword, revision: user.updatedAt.toISOString() } });
     assert.equal(await Session.countDocuments({ tokenHash: hashSessionToken(oldCookie.split('=')[1]) }), 0);
     await login('renamed_editor', password, 401); const changedCookie = await login('renamed_editor', newPassword);
     await request('/editor', 200, { cookie: changedCookie });
     user = await User.findById(id);
-    await request('/editor/users/' + id + '/delete', 303, { cookie: editorCookie, method: 'POST', body: { revision: user.updatedAt.toISOString(), confirmation: user.username } });
+    await request('/editor/users/' + id, 303, { cookie: editorCookie, method: 'DELETE', body: { revision: user.updatedAt.toISOString(), confirmation: user.username } });
     assert.equal(await User.findById(id), null);
     const self = await User.findById(editor._id);
-    await request('/editor/users/' + editor._id + '/delete', 409, { cookie: editorCookie, method: 'POST', body: { revision: self.updatedAt.toISOString(), confirmation: self.username } });
-    await request('/editor/users/' + editor._id + '/edit', 409, { cookie: editorCookie, method: 'POST', body: { revision: self.updatedAt.toISOString(), username: self.username, role: 'reporter' } });
+    await request('/editor/users/' + editor._id, 409, { cookie: editorCookie, method: 'DELETE', body: { revision: self.updatedAt.toISOString(), confirmation: self.username } });
+    await request('/editor/users/' + editor._id, 409, { cookie: editorCookie, method: 'PATCH', body: { revision: self.updatedAt.toISOString(), username: self.username, role: 'reporter' } });
   });
 
   await t.test('View statistics full CRUD, analytics history and article cleanup', async () => {
@@ -193,7 +193,7 @@ test('release HTTP matrix against isolated MongoDB', { timeout: 120000 }, async 
     assert.equal(analytics.publicationHistory.length, 3); assert(analytics.timeline.some(point => point.viewCount === 15));
     await request(route + '/' + id, 200, { cookie: editorCookie, method: 'DELETE' });
     await request(route + '/' + id, 404, { cookie: editorCookie });
-    await request('/editor/articles/' + t.articleId + '/delete', 303, { cookie: editorCookie, method: 'POST' });
+    await request('/editor/articles/' + t.articleId, 303, { cookie: editorCookie, method: 'DELETE' });
     assert.equal(await Comment.countDocuments({ article: t.articleId }), 0);
     assert.equal(await ViewStat.countDocuments({ article: t.articleId }), 0);
     await request('/articles/' + t.articleId, 404);
@@ -207,7 +207,7 @@ test('release HTTP matrix against isolated MongoDB', { timeout: 120000 }, async 
     }
     const responses = await Promise.all(actors.map((actor, i) => {
       const target = actors[1 - i].user;
-      return fetch(base + '/editor/users/' + target._id + '/edit', { method: 'POST', redirect: 'manual', headers: { cookie: actor.cookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ username: target.username, role: 'reporter', revision: target.updatedAt.toISOString() }) });
+      return fetch(base + '/editor/users/' + target._id, { method: 'PATCH', redirect: 'manual', headers: { cookie: actor.cookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ username: target.username, role: 'reporter', revision: target.updatedAt.toISOString() }) });
     }));
     assert.deepEqual(responses.map(response => response.status).sort(), [303, 403]);
     for (const response of responses) await response.text();

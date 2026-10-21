@@ -20,7 +20,9 @@ function expectedError(error) {
 exports.listUsers = async (req, res, next) => {
   try {
     const data = await userAdmin.listUsers(req.query);
-    res.render('editor/users', { pageTitle: 'User administration', ...data });
+    // An Ajax request (public/js/listResults.js) receives only the results.
+    res.vary('X-Requested-With');
+    res.render(req.xhr ? 'editor/partials/user-results' : 'editor/users', { pageTitle: 'User administration', ...data });
   } catch (error) {
     const known = expectedError(error);
     if (known) return respond(req, res, known.status, known.message);

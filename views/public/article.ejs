@@ -22,24 +22,7 @@
 
 <body>
 
-  <header class="site-header">
-    <div class="container header-content">
-
-      <a href="/" class="logo">
-        The Daily Web
-      </a>
-
-      <nav class="main-nav">
-        <a href="/">Home</a>
-        <% if (currentUser) { %>
-          <a href="<%= currentUser.role === 'editor' ? '/editor' : '/reporter' %>">My workspace</a>
-        <% } else { %>
-          <a href="/login">Reporter / Editor Login</a>
-        <% } %>
-      </nav>
-
-    </div>
-  </header>
+  <%- include('../partials/site-header') %>
 
   <main class="article-page">
 

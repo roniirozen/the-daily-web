@@ -5,6 +5,7 @@ const { trackArticleView } = require('../middleware/viewTrackingMiddleware');
 
 const router = express.Router();
 
+router.get('/', publicController.getHome);
 router.get('/articles/:id', trackArticleView, publicController.getArticle);
 
 router.get(

@@ -13,15 +13,14 @@ router.get('/users', userAdminController.listUsers);
 router.get('/users/new', userAdminController.getCreateUser);
 router.post('/users', userAdminController.createUser);
 router.get('/users/:id/edit', userAdminController.getEditUser);
-router.post('/users/:id/edit', userAdminController.updateUser);
-router.post('/users/:id/delete', userAdminController.deleteUser);
+router.patch('/users/:id', userAdminController.updateUser);
+router.delete('/users/:id', userAdminController.deleteUser);
 
 router.get('/', editorController.getDashboard);
 router.get('/articles/:id', editorController.getReviewArticle);
-// POST actions support ordinary EJS forms without a method-override package.
-router.post('/articles/:id/edit', editorController.editArticle);
-router.post('/articles/:id/approve', editorController.approveArticle);
-router.post('/articles/:id/return', editorController.returnArticle);
-router.post('/articles/:id/delete', editorController.deleteArticle);
+// HTML forms reach PATCH and DELETE through middleware/methodOverride.js.
+router.patch('/articles/:id', editorController.editArticle);
+router.patch('/articles/:id/status', editorController.changeStatus);
+router.delete('/articles/:id', editorController.deleteArticle);
 
 module.exports = router;

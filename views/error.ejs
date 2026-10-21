@@ -19,19 +19,7 @@
   <link rel="stylesheet" href="/css/main.css">
 </head>
 <body>
-  <header class="site-header">
-    <div class="container header-content">
-      <a href="/" class="logo">The Daily Web</a>
-      <nav class="main-nav" aria-label="Main navigation">
-        <a href="/">Home</a>
-        <% if (currentUser) { %>
-          <a href="<%= currentUser.role === 'editor' ? '/editor' : '/reporter' %>">My workspace</a>
-        <% } else { %>
-          <a href="/login">Reporter / Editor Login</a>
-        <% } %>
-      </nav>
-    </div>
-  </header>
+  <%- include('partials/site-header') %>
 
   <main class="container error-page">
     <section class="error-card" aria-labelledby="error-heading">

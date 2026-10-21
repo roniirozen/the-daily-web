@@ -7,8 +7,8 @@ const User = require('../models/User');
 const ViewStat = require('../models/ViewStat');
 const { hashPassword } = require('../utils/password');
 const logger = require('../utils/logger');
+const { MONGO_URI } = require('../config/mongoUri');
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/web-daily-demo';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
 const NOW = new Date();
@@ -32,13 +32,23 @@ const CATEGORIES = [
 ];
 
 const DEMO_USERS = [
-  { username: 'demo_reporter_1', password: 'DemoReporter!2026', role: 'reporter' },
-  { username: 'demo_reporter_2', password: 'DemoReporter!2026', role: 'reporter' },
-  { username: 'demo_reporter_3', password: 'DemoReporter!2026', role: 'reporter' },
-  { username: 'demo_reporter_4', password: 'DemoReporter!2026', role: 'reporter' },
-  { username: 'demo_editor_1', password: 'DemoEditor!2026', role: 'editor' },
-  { username: 'demo_editor_2', password: 'DemoEditor!2026', role: 'editor' }
+  { username: 'demo_reporter_1', role: 'reporter' },
+  { username: 'demo_reporter_2', role: 'reporter' },
+  { username: 'demo_reporter_3', role: 'reporter' },
+  { username: 'demo_reporter_4', role: 'reporter' },
+  { username: 'demo_editor_1', role: 'editor' },
+  { username: 'demo_editor_2', role: 'editor' }
 ];
+
+// No password is stored in the repository. Every seed run generates new
+// passwords (one shared by the Reporters, one by the Editors), stores only
+// their scrypt hashes and prints them once to the terminal.
+function generateDemoPasswords() {
+  return {
+    reporter: crypto.randomBytes(12).toString('base64url'),
+    editor: crypto.randomBytes(12).toString('base64url')
+  };
+}
 
 const SUBJECTS = [
   'community solar projects',
@@ -335,9 +345,9 @@ async function removePreviousDemoData() {
   await User.deleteMany({ _id: { $in: previousUserIds } });
 }
 
-async function createDemoUsers() {
+async function createDemoUsers(passwords) {
   const users = await Promise.all(DEMO_USERS.map(async credentials => {
-    const { salt, hash } = await hashPassword(credentials.password);
+    const { salt, hash } = await hashPassword(passwords[credentials.role]);
     return {
       _id: new mongoose.Types.ObjectId(),
       username: credentials.username,
@@ -357,23 +367,29 @@ async function insertInBatches(Model, documents, batchSize = 4000) {
   }
 }
 
-function printCredentials() {
-  console.log('\nDEMO ACCOUNTS — fake local accounts only; demo-only passwords are documented in README');
+// Printed to the terminal only, never to the log files.
+function printCredentials(passwords) {
+  console.log('\nDEMO ACCOUNTS — new passwords on every seed run; previous ones no longer work');
   for (const user of DEMO_USERS) {
-    console.log(`  ${user.role.toUpperCase()}: ${user.username}`);
+    console.log(`  ${user.role.padEnd(8)}  ${user.username.padEnd(16)}  password: ${passwords[user.role]}`);
   }
 }
 
+// A refusal has a fixed message that is safe to print as it is.
+class SeedRefusedError extends Error {}
+
 async function seedDemoData() {
-  if (process.env.DEMO_SEED !== 'true') {
-    throw new Error(
-      'Demo seed cancelled. Set DEMO_SEED=true to confirm replacement of existing demo records.'
+  // "npm run seed" passes --confirm; running the script directly needs
+  // --confirm or DEMO_SEED=true, so demo records are never replaced by accident.
+  if (!process.argv.includes('--confirm') && process.env.DEMO_SEED !== 'true') {
+    throw new SeedRefusedError(
+      'Demo seed cancelled. Run "npm run seed" to confirm replacement of existing demo records.'
     );
   }
 
   const databaseName = decodeURIComponent(MONGO_URI.match(/^mongodb(?:\+srv)?:\/\/[^/]+\/([^?]+)(?:\?|$)/)?.[1] || '');
   if (!/^(web-daily-demo(?:-[a-z0-9]+)?|daily_web_test_[a-f0-9]+)$/.test(databaseName)) {
-    throw new Error('Use a web-daily-demo database (or an isolated daily_web_test_ database).');
+    throw new SeedRefusedError('Use a web-daily-demo database (or an isolated daily_web_test_ database).');
   }
 
   await mongoose.connect(MONGO_URI);
@@ -387,7 +403,8 @@ async function seedDemoData() {
     }
     await Promise.all([User, Article, Comment, Session, ViewStat].map(Model => Model.init()));
     await removePreviousDemoData();
-    const users = await createDemoUsers();
+    const passwords = generateDemoPasswords();
+    const users = await createDemoUsers(passwords);
     const reporters = users.filter(user => user.role === 'reporter');
     const editors = users.filter(user => user.role === 'editor');
     const totalArticleCount = Object.values(ARTICLE_COUNTS).reduce((sum, count) => sum + count, 0);
@@ -432,13 +449,14 @@ async function seedDemoData() {
     console.log(`  Total represented views: ${totalViews}`);
     console.log(`  Comments: ${comments.length}`);
     console.log(`  Categories: ${CATEGORIES.join(', ')}`);
-    printCredentials();
+    printCredentials(passwords);
   } finally {
     await mongoose.disconnect();
   }
 }
 
 seedDemoData().catch(error => {
-  logger.error('Demo seed failed; check DEMO_SEED and the demo database name', { error });
+  if (error instanceof SeedRefusedError) console.error(error.message);
+  else logger.error('Demo seed failed; check that MongoDB is running', { error });
   process.exitCode = 1;
 });

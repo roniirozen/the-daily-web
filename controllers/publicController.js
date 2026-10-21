@@ -2,6 +2,11 @@ const Article = require('../models/Article');
 const { getCommentPage } = require('../services/commentQueries');
 const { respond } = require('../middleware/errorMiddleware');
 
+exports.getHome = (req, res) => {
+  // The feed itself is loaded by public/js/feed.js through /api/feed.
+  res.render('public/home', { pageTitle: 'The Daily Web' });
+};
+
 exports.getArticle = async (req, res, next) => {
   try {
     if (!/^[a-fA-F0-9]{24}$/.test(req.params.id)) {
@@ -27,7 +32,6 @@ exports.getArticle = async (req, res, next) => {
       article,
       comments,
       nextCommentsCursor: nextCursor,
-      currentUser: req.currentUser,
       // Only shows the controls. The comment API checks the Editor role itself.
       canModerate: req.currentUser?.role === 'editor'
     });

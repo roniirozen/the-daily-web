@@ -10,12 +10,12 @@
 <body class="editor-page">
   <% const pending = article.status === 'pending'; const working = article.workingVersion || {}; const live = article.publishedVersion; const base = '/editor/articles/' + article._id; const revision = article.updatedAt.toISOString(); %>
   <% const history = article.publicationHistory || []; const hasChanges = live && ['title', 'summary', 'category', 'content', 'imageUrl'].some(field => (working[field] || '') !== (live[field] || '')); %>
-  <header class="masthead"><a class="brand" href="/">The Daily Web</a><a href="/editor">&larr; Article desk</a></header>
+  <%- include('../partials/editor-header', { navSection: 'articles' }) %>
   <main>
     <div class="page-heading">
       <p class="eyebrow">Newsroom / Article review</p>
       <h1><%= working.title || 'Untitled article' %></h1>
-      <p>By <strong><%= article.reporter?.username || 'Reporter unavailable' %></strong> &middot; <span class="badge <%= article.status %>"><%= article.status %></span></p>
+      <p>By <strong><%= article.reporter?.username || 'Reporter unavailable' %></strong> &middot; <span class="badge <%= article.status %>"><%= statusLabels[article.status] %></span></p>
       <p class="muted">Last updated <time datetime="<%= revision %>"><%= article.updatedAt.toLocaleString('en-GB') %></time></p>
       <p><a href="/editor/analytics/<%= article._id %>">View analytics &rarr;</a></p>
     </div>
@@ -28,7 +28,8 @@
         <p class="muted">Working record updated <time datetime="<%= revision %>"><%= article.updatedAt.toLocaleString('en-GB') %></time></p>
         <% if (live && !hasChanges) { %><p class="muted">The saved article fields match the public version.</p><% } %>
         <p class="muted"><%= pending ? 'Edit this submission, then save before approving. Approval uses the saved version.' : (article.status === 'published' ? 'Saving changes creates a pending update. Readers keep seeing the current public version until you approve it.' : 'You can edit this working copy. Approval and return actions become available after the reporter submits it.') %></p>
-        <form id="working-form" action="<%= base %>/edit" method="post">
+        <form id="working-form" action="<%= base %>" method="post">
+          <input type="hidden" name="_method" value="PATCH">
           <input type="hidden" name="revision" value="<%= revision %>">
           <fieldset>
             <legend class="sr-only">Working article fields</legend>
@@ -60,14 +61,18 @@
       <section class="panel" aria-labelledby="decision-heading">
         <h2 id="decision-heading">Editorial decision</h2>
         <div class="decision-grid">
-          <form action="<%= base %>/approve" method="post">
+          <form action="<%= base %>/status" method="post">
+            <input type="hidden" name="_method" value="PATCH">
+            <input type="hidden" name="status" value="published">
             <input type="hidden" name="revision" value="<%= revision %>">
             <h3><%= live ? 'Update approval' : 'Initial publication' %></h3>
             <p>Approval publishes the saved working version and records this decision in publication history. Save any field edits above first.</p>
             <p id="unsaved-warning" class="form-error" role="status" hidden>There are unsaved field edits. Save the working version before approving.</p>
             <button id="approve-button" class="approve" type="submit"><%= live ? 'Approve and publish update' : 'Approve initial publication' %></button>
           </form>
-          <form action="<%= base %>/return" method="post">
+          <form action="<%= base %>/status" method="post">
+            <input type="hidden" name="_method" value="PATCH">
+            <input type="hidden" name="status" value="returned">
             <input type="hidden" name="revision" value="<%= revision %>">
             <label for="editorNote">Required note for the reporter</label>
             <textarea id="editorNote" name="editorNote" rows="4" maxlength="2000" required placeholder="Explain the corrections needed before publication."></textarea>
@@ -84,7 +89,7 @@
     </section>
     <section class="panel danger-zone">
       <h2>Delete article</h2><p>Deleting permanently removes the working version, published version and publication history.</p>
-      <details><summary>Show delete action</summary><form action="<%= base %>/delete" method="post"><p>This action cannot be undone.</p><button class="danger" type="submit">Permanently delete article</button></form></details>
+      <details><summary>Show delete action</summary><form action="<%= base %>" method="post"><input type="hidden" name="_method" value="DELETE"><p>This action cannot be undone.</p><button class="danger" type="submit">Permanently delete article</button></form></details>
     </section>
   </main>
   <% if (pending) { %>
