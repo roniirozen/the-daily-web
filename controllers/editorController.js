@@ -6,6 +6,7 @@ const logger = require('../utils/logger');
 const { validateArticleInput } = require('../utils/articleValidation');
 const { escapeRegex } = require('../utils/escapeRegex');
 const { respond } = require('../middleware/errorMiddleware');
+const { canChangeStatus } = require('../utils/articleWorkflow');
 
 const statuses = ['draft', 'pending', 'published', 'returned'];
 const fields = ['title', 'summary', 'content', 'imageUrl', 'category'];
@@ -45,9 +46,9 @@ function prepareRevisionSave(article, req, res) {
   return true;
 }
 
-function prepareReviewSave(article, req, res) {
-  if (article.status !== 'pending') {
-    respond(req, res, 409, 'Only pending articles can be approved or returned.');
+function prepareStatusChange(article, nextStatus, req, res) {
+  if (!canChangeStatus(article.status, nextStatus, 'editor')) {
+    respond(req, res, 409, 'Only articles awaiting approval can be approved or returned.');
     return false;
   }
   return prepareRevisionSave(article, req, res);
@@ -100,7 +101,7 @@ exports.editArticle = async (req, res, next) => {
     const version = { ...input.fields, content: input.fields.content.replace(/\r\n?/g, '\n') };
     const changed = fields.some(field => version[field] !== (article.publishedVersion?.[field] || ''));
     article.workingVersion = version;
-    if (article.status === 'published' && changed) article.status = 'pending';
+    if (changed && canChangeStatus(article.status, 'pending', 'editor')) article.status = 'pending';
     await article.save();
     logger.info('Editor saved article', { userId: req.currentUser._id.toString(), route: '/editor/articles/:id/edit' });
     return res.redirect(303, `/editor/articles/${article._id}`);
@@ -110,7 +111,7 @@ exports.editArticle = async (req, res, next) => {
 exports.approveArticle = async (req, res, next) => {
   try {
     const article = await findArticle(req, res);
-    if (!article || !prepareReviewSave(article, req, res)) return;
+    if (!article || !prepareStatusChange(article, 'published', req, res)) return;
     const message = validateVersion(article.workingVersion);
     if (message) return respond(req, res, 400, message);
     const approvedAt = new Date();
@@ -133,7 +134,7 @@ exports.approveArticle = async (req, res, next) => {
 exports.returnArticle = async (req, res, next) => {
   try {
     const article = await findArticle(req, res);
-    if (!article || !prepareReviewSave(article, req, res)) return;
+    if (!article || !prepareStatusChange(article, 'returned', req, res)) return;
     const note = req.body?.editorNote;
     if (typeof note !== 'string' || !note.trim() || note.length > 2000) {
       return respond(req, res, 400, 'An editor note of at most 2000 characters is required.');

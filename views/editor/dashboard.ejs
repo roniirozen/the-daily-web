@@ -17,7 +17,7 @@
       <select id="status" name="status">
         <option value="">All statuses</option>
         <% statuses.forEach(status => { %>
-          <option value="<%= status %>" <%= selectedStatus === status ? 'selected' : '' %>><%= status.charAt(0).toUpperCase() + status.slice(1) %></option>
+          <option value="<%= status %>" <%= selectedStatus === status ? 'selected' : '' %>><%= statusLabels[status] %></option>
         <% }) %>
       </select>
       <button type="submit">Apply filter</button>
@@ -35,7 +35,7 @@
               <tr>
                 <th scope="row"><%= article.workingVersion?.title || 'Untitled article' %><small><%= article.workingVersion?.category || 'Uncategorized' %></small></th>
                 <td><%= article.reporter?.username || 'Reporter unavailable' %></td>
-                <td><span class="badge <%= article.status %>"><%= article.status %></span></td>
+                <td><span class="badge <%= article.status %>"><%= statusLabels[article.status] %></span></td>
                 <td><%= article.publishedVersion ? 'Published version live' : 'Not published' %></td>
                 <td><time datetime="<%= article.updatedAt.toISOString() %>"><%= article.updatedAt.toLocaleString('en-GB') %></time></td>
                 <td><a class="review-link" href="/editor/articles/<%= article._id %>">Review<span class="sr-only"> <%= article.workingVersion?.title || 'Untitled article' %></span> &rarr;</a></td>

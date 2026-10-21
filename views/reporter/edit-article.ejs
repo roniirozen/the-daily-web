@@ -26,7 +26,8 @@
     <a class="back-link" href="/reporter">&larr; Back to articles</a>
     <div class="workspace-heading">
       <div><p class="section-label">REPORTER DESK</p><h1><%= pageTitle %></h1></div>
-      <span id="article-status" class="status-badge"><%= article ? article.status : 'draft' %></span>
+      <% const status = article ? article.status : 'draft'; %>
+      <span id="article-status" class="status-badge status-<%= status %>" data-status="<%= status %>"><%= statusLabels[status] %></span>
     </div>
     <% if (article && article.publishedVersion) { %>
       <p class="notice">The currently approved version remains public until your new version is approved. <a href="/articles/<%= article._id %>">View public version</a></p>

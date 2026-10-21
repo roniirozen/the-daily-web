@@ -86,7 +86,7 @@ test('real browser: feed races, infinite scrolling, comments, autosave and respo
   await browser.navigate(savedUrl);
   assert.equal(await browser.evaluate('document.querySelector("#title").value'), 'Browser autosave draft');
   await browser.evaluate(`for (const name of ['summary','content','category']) { const field=document.getElementById(name); field.value='Browser submitted text'; field.dispatchEvent(new Event('input', { bubbles: true })); } document.querySelector('#article-editor').requestSubmit();`);
-  await browser.waitFor('document.querySelector("#article-status").textContent === "pending"');
+  await browser.waitFor('document.querySelector("#article-status").dataset.status === "pending"');
   assert(await browser.evaluate('document.querySelector("#article-fields").disabled'));
   const screens = ['/', '/articles/' + articles[0]._id, '/reporter', savedUrl.slice(base.length)];
   async function assertLayout(route, width) {

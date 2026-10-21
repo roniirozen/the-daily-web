@@ -12,6 +12,7 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 const feedRoutes = require('./routes/feedRoutes');
 const weatherRoutes = require('./routes/weatherRoutes');
 const { loadCurrentUser } = require('./middleware/authMiddleware');
+const { STATUS_LABELS } = require('./utils/articleWorkflow');
 const { notFound, errorHandler, logServerResponses } = require('./middleware/errorMiddleware');
 
 const app = express();
@@ -19,6 +20,7 @@ const PORT = process.env.PORT || 3000;
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+app.locals.statusLabels = STATUS_LABELS;
 
 app.use(express.urlencoded({ extended: true, limit: '512kb' }));
 app.use(express.json({ limit: '512kb' }));

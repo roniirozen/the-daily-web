@@ -34,7 +34,7 @@
       <% articles.forEach(article => { %>
         <article class="workspace-card story-row">
           <div>
-            <span class="status-badge status-<%= article.status %>"><%= article.status %></span>
+            <span class="status-badge status-<%= article.status %>"><%= statusLabels[article.status] %></span>
             <h2><%= article.workingVersion.title || 'Untitled draft' %></h2>
             <p class="story-date">Updated <time datetime="<%= article.updatedAt.toISOString() %>"><%= article.updatedAt.toLocaleString('en-GB') %></time></p>
             <% if (article.publishedVersion) { %>

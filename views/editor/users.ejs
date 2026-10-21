@@ -22,7 +22,7 @@
         <caption class="sr-only">Newsroom accounts sorted by username</caption>
         <thead><tr><th scope="col">Username</th><th scope="col">Role</th><th scope="col">Created</th><th scope="col">Action</th></tr></thead>
         <tbody><% users.forEach(user => { %>
-          <tr><th scope="row"><%= user.username %></th><td><span class="badge"><%= user.role %></span></td><td><time datetime="<%= user.createdAt.toISOString() %>"><%= user.createdAt.toLocaleDateString('en-GB') %></time></td><td><a href="/editor/users/<%= user._id %>/edit">Manage<span class="sr-only"> <%= user.username %></span></a></td></tr>
+          <tr><th scope="row"><%= user.username %></th><td><span class="badge"><%= user.role === 'editor' ? 'Editor' : 'Reporter' %></span></td><td><time datetime="<%= user.createdAt.toISOString() %>"><%= user.createdAt.toLocaleDateString('en-GB') %></time></td><td><a href="/editor/users/<%= user._id %>/edit">Manage<span class="sr-only"> <%= user.username %></span></a></td></tr>
         <% }); %></tbody>
       </table></div>
       <nav class="pagination" aria-label="User list pages">

@@ -20,7 +20,7 @@
 .editor-page tbody th { min-width: 220px; max-width: 360px; overflow-wrap: anywhere; }
 table small { display: block; font-weight: normal; margin-top: .3rem; }
 .review-link { white-space: nowrap; font-weight: bold; }
-.badge { display: inline-block; border-radius: 1rem; padding: .2rem .7rem; font-size: .8rem; font-weight: bold; text-transform: capitalize; background: #e9edf3; color: #394c62; }
+.badge { display: inline-block; border-radius: 1rem; padding: .2rem .7rem; font-size: .8rem; font-weight: bold; background: #e9edf3; color: #394c62; }
 .badge.pending { background: #fff0cc; color: #795400; }
 .badge.published { background: #dff4e8; color: #17653f; }
 .badge.returned { background: #fde6df; color: #8b3c25; }

@@ -12,7 +12,7 @@
 .story-date { margin: 0; }
 .story-row > div { min-width: 0; }
 .story-row > a, .workspace-heading > a { flex-shrink: 0; }
-.status-badge { display: inline-block; padding: 4px 12px; background: #eeeeea; border-radius: 20px; font-size: .85rem; font-weight: 700; text-transform: capitalize; }
+.status-badge { display: inline-block; padding: 4px 12px; background: #eeeeea; border-radius: 20px; font-size: .85rem; font-weight: 700; }
 .status-pending { background: #fff1cd; color: #694600; }
 .status-published { background: #e0f0e6; color: #245337; }
 .status-returned { background: #f8e3db; color: #823b22; }

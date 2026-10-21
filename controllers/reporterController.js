@@ -1,6 +1,7 @@
 const Article = require('../models/Article');
 const { validateArticleInput } = require('../utils/articleValidation');
 const { respond } = require('../middleware/errorMiddleware');
+const { STATUS_LABELS, canChangeStatus, reporterCanEdit } = require('../utils/articleWorkflow');
 
 function getReporterId(req) {
   return req.session?.user?.id || null;
@@ -126,7 +127,7 @@ exports.autosaveArticle = async (req, res, next) => {
     if (!article) {
       return res.status(404).json({ message: 'Article not found' });
     }
-    if (!['draft', 'returned', 'published'].includes(article.status)) {
+    if (!reporterCanEdit(article.status)) {
       return res.status(409).json({
         message: 'An article waiting for editor approval cannot be edited'
       });
@@ -168,6 +169,7 @@ exports.autosaveArticle = async (req, res, next) => {
     res.json({
       message: 'Draft saved',
       status: updated.status,
+      statusLabel: STATUS_LABELS[updated.status],
       savedAt: updated.lastAutosavedAt
     });
   } catch (error) {
@@ -189,7 +191,7 @@ exports.submitForReview = async (req, res, next) => {
     if (!article) {
       return res.status(404).json({ message: 'Article not found' });
     }
-    if (!['draft', 'returned'].includes(article.status)) {
+    if (!canChangeStatus(article.status, 'pending', 'reporter')) {
       return res.status(409).json({
         message: 'This article cannot be submitted in its current status'
       });
@@ -219,7 +221,11 @@ exports.submitForReview = async (req, res, next) => {
         message: 'Article changed while submitting. Review it and try again.'
       });
     }
-    res.json({ message: 'Article submitted for editor approval' });
+    res.json({
+      message: 'Article submitted for editor approval',
+      status: updated.status,
+      statusLabel: STATUS_LABELS[updated.status]
+    });
   } catch (error) {
     next(error);
   }

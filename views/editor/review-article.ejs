@@ -15,7 +15,7 @@
     <div class="page-heading">
       <p class="eyebrow">Newsroom / Article review</p>
       <h1><%= working.title || 'Untitled article' %></h1>
-      <p>By <strong><%= article.reporter?.username || 'Reporter unavailable' %></strong> &middot; <span class="badge <%= article.status %>"><%= article.status %></span></p>
+      <p>By <strong><%= article.reporter?.username || 'Reporter unavailable' %></strong> &middot; <span class="badge <%= article.status %>"><%= statusLabels[article.status] %></span></p>
       <p class="muted">Last updated <time datetime="<%= revision %>"><%= article.updatedAt.toLocaleString('en-GB') %></time></p>
       <p><a href="/editor/analytics/<%= article._id %>">View analytics &rarr;</a></p>
     </div>
