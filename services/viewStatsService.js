@@ -43,7 +43,9 @@ async function recordView(articleId, when = new Date()) {
     ),
     // Kept as a best-effort denormalized counter for popularity sorting on
     // the feed; the authoritative per-hour history is the ViewStat bucket.
-    Article.updateOne({ _id: articleId }, { $inc: { totalViews: 1 } })
+    // A view is not an edit, so it must not change the article's updatedAt
+    // revision that Editors and Reporters use to detect concurrent changes.
+    Article.updateOne({ _id: articleId }, { $inc: { totalViews: 1 } }, { timestamps: false })
   ]);
 
   return bucket;
@@ -112,7 +114,7 @@ async function createViewStat({ article, bucketStart, viewCount = 0 }) {
     const error = new Error('Published article not found.'); error.status = 404; throw error;
   }
   const record = await ViewStat.create({ article, bucketStart: bucketStartFor(bucketStart), viewCount });
-  await Article.updateOne({ _id: article }, { $inc: { totalViews: viewCount } });
+  await Article.updateOne({ _id: article }, { $inc: { totalViews: viewCount } }, { timestamps: false });
   return record;
 }
 
@@ -140,14 +142,14 @@ async function updateViewStat(id, { viewCount }) {
   // so concurrent view increments are not overwritten by an absolute total.
   const previous = await ViewStat.findByIdAndUpdate(id, { $set: { viewCount } }, { runValidators: true });
   if (!previous) return null;
-  await Article.updateOne({ _id: previous.article }, { $inc: { totalViews: viewCount - previous.viewCount } });
+  await Article.updateOne({ _id: previous.article }, { $inc: { totalViews: viewCount - previous.viewCount } }, { timestamps: false });
   return ViewStat.findById(id);
 }
 
 async function deleteViewStat(id) {
   if (!mongoose.isObjectIdOrHexString(id)) return null;
   const removed = await ViewStat.findByIdAndDelete(id);
-  if (removed) await Article.updateOne({ _id: removed.article }, { $inc: { totalViews: -removed.viewCount } });
+  if (removed) await Article.updateOne({ _id: removed.article }, { $inc: { totalViews: -removed.viewCount } }, { timestamps: false });
   return removed;
 }
 

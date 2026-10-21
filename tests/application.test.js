@@ -84,8 +84,15 @@ test('release HTTP matrix against isolated MongoDB', { timeout: 120000 }, async 
     await request(route + '/autosave', 200, { cookie: reporterCookie, method: 'PATCH', body: { title: 'New revised headline' } });
     assert((await request('/articles/' + id, 200)).text.includes('Approved original headline'));
     await request(route + '/submit', 200, { cookie: reporterCookie, method: 'POST' });
+    const submitted = await Article.findById(id);
     assert(!(await request('/articles/' + id, 200)).text.includes('New revised headline'));
+    // Views are recorded after the response; a view must not change the revision.
+    for (let i = 0; i < 50 && (await Article.findById(id)).totalViews === submitted.totalViews; i++) {
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
     article = await Article.findById(id);
+    assert(article.totalViews > submitted.totalViews);
+    assert.equal(article.updatedAt.toISOString(), submitted.updatedAt.toISOString());
     await request(review + '/approve', 303, { cookie: editorCookie, method: 'POST', body: { revision: article.updatedAt.toISOString() } });
     assert((await request('/articles/' + id, 200)).text.includes('New revised headline'));
     article = await Article.findById(id);
