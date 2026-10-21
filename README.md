@@ -278,14 +278,21 @@ passwords, cookies, tokens or request bodies.
 ## Checks and tests
 
 ```sh
-npm run check          # syntax, imports, EJS templates and static paths
-npm test               # server tests against temporary MongoDB databases
-npm run test:browser   # tests in a real headless browser
+npm run check   # syntax, imports, EJS templates and static paths
+npm test        # server tests
 ```
 
-The browser tests find Chrome, Edge or Chromium in the usual install
-locations on macOS, Windows and Linux. For another location, set
-`BROWSER_PATH` to the browser executable.
+The tests use Node's built-in test runner (`node:test`), so they need no
+extra packages. MongoDB must be running. Tests that need a database create a
+temporary one and delete it afterwards, so the demo data is never touched.
+
+| File | What it checks |
+| --- | --- |
+| `tests/application.test.js` | Permissions, the article workflow, comments and the rate limit, user and statistics CRUD, and the feed with 2,000 articles |
+| `tests/operations.test.js` | Sessions survive a server restart; sign-out and logs are safe |
+| `tests/errors.test.js` | Invalid input and failures return proper errors without crashing the server |
+| `tests/weather.test.js` | Weather caching and the 15-minute limit |
+| `tests/seed.test.js` | The demo seed: its safety checks, generated passwords and data counts |
 
 ## Project structure
 
@@ -311,5 +318,5 @@ public/css/            Responsive stylesheets
 public/js/             Browser scripts: feed, comments, view tracking, weather,
                        autosave editor, list updates, analytics graph
 scripts/               Project check, demo seed and demo verification
-tests/                 Server, browser, operations and seed tests
+tests/                 Server, operations, error, weather and seed tests
 ```
