@@ -47,7 +47,8 @@ table small { display: block; font-weight: normal; margin-top: .3rem; }
 .editor-page :focus-visible { outline: 3px solid #2579c2; outline-offset: 3px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .masthead nav, .form-actions, .pagination { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
-.masthead [aria-current="page"] { font-weight: bold; }
+.masthead nav .active { font-weight: bold; }
+.masthead form { margin: 0; }
 .editor-page .button-link { display: inline-block; background: #245b92; color: white; padding: .7rem 1rem; border-radius: .35rem; text-decoration: none; }
 .account-form { max-width: 760px; }
 .account-form select { width: 100%; margin-bottom: 1rem; }

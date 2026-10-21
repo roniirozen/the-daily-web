@@ -8,15 +8,7 @@
   <link rel="stylesheet" href="/css/reporter.css">
 </head>
 <body>
-  <header class="site-header">
-    <div class="container header-content">
-      <a href="/" class="logo">The Daily Web</a>
-      <nav class="main-nav" aria-label="Main navigation">
-        <a href="/">Public site</a>
-        <form method="POST" action="/logout"><button class="text-button">Sign out</button></form>
-      </nav>
-    </div>
-  </header>
+  <%- include('../partials/reporter-header', { navCurrent: 'articles' }) %>
   <main class="container newsroom">
     <div class="workspace-heading">
       <div><p class="section-label">NEWSROOM</p><h1>Your articles</h1>

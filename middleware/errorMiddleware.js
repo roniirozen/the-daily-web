@@ -38,7 +38,7 @@ function sameSiteReferrer(req) {
 function respond(req, res, status, message) {
   if (wantsJson(req)) return res.status(status).json({ message });
   return res.status(status).render('error', {
-    status, message, currentUser: req.currentUser || null, backUrl: sameSiteReferrer(req)
+    status, message, currentUser: res.locals.currentUser || null, backUrl: sameSiteReferrer(req)
   });
 }
 

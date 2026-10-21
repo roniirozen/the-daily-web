@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/css/editor.css">
 </head>
 <body class="editor-page">
-  <header class="masthead"><a class="brand" href="/">The Daily Web</a><a href="/editor/users">&larr; User administration</a></header>
+  <%- include('../partials/editor-header', { navSection: 'users' }) %>
   <main>
     <div class="page-heading"><p class="eyebrow">Newsroom / New account</p><h1>Create user</h1><p>Give a new team member access to the newsroom.</p></div>
     <section class="panel account-form">

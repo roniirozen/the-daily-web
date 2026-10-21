@@ -22,8 +22,6 @@
 .notice { padding: 16px 20px; background: #e9eef3; border-left: 3px solid #36556d; }
 .secondary-button { padding: 10px 18px; border: 1px solid #898981; border-radius: 8px; font-weight: 700; }
 .primary-button, .secondary-button { display: inline-block; text-align: center; }
-.text-button { padding: 0; border: 0; background: transparent; font: inherit; color: inherit; cursor: pointer; }
-.text-button:hover { text-decoration: underline; }
 .editor-workspace { max-width: 980px; }
 .editor-workspace fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .editor-workspace fieldset:disabled { opacity: .75; }

@@ -13,15 +13,7 @@
   <script src="/js/reporterEditor.js" defer></script>
 </head>
 <body>
-  <header class="site-header">
-    <div class="container header-content">
-      <a href="/" class="logo">The Daily Web</a>
-      <nav class="main-nav" aria-label="Main navigation">
-        <a href="/reporter">My articles</a>
-        <form method="POST" action="/logout"><button class="text-button">Sign out</button></form>
-      </nav>
-    </div>
-  </header>
+  <%- include('../partials/reporter-header') %>
   <main class="container newsroom editor-workspace">
     <a class="back-link" href="/reporter">&larr; Back to articles</a>
     <div class="workspace-heading">

@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/css/editor.css">
 </head>
 <body class="editor-page">
-  <header class="masthead"><a class="brand" href="/">The Daily Web</a><a href="/editor/users">&larr; User administration</a></header>
+  <%- include('../partials/editor-header', { navSection: 'users' }) %>
   <main>
     <div class="page-heading"><p class="eyebrow">Newsroom / Account details</p><h1><%= user.username %><%= isSelf ? ' (you)' : '' %></h1><p>Created <time datetime="<%= user.createdAt.toISOString() %>"><%= user.createdAt.toLocaleString('en-GB') %></time> &middot; Updated <time datetime="<%= user.updatedAt.toISOString() %>"><%= user.updatedAt.toLocaleString('en-GB') %></time></p></div>
     <section class="panel account-form">

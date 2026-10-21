@@ -3,7 +3,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 const logger = require('./utils/logger');
-const indexRoutes = require('./routes');
 const publicRoutes = require('./routes/publicRoutes');
 const authRoutes = require('./routes/authRoutes');
 const reporterRoutes = require('./routes/reporterRoutes');
@@ -30,7 +29,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(logServerResponses);
 app.use(loadCurrentUser);
-app.use('/', indexRoutes);
 app.use('/', publicRoutes);
 app.use('/', authRoutes);
 app.use('/reporter', reporterRoutes);

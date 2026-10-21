@@ -14,6 +14,7 @@ async function loadCurrentUser(req, res, next) {
 
     req.currentUser = null;
     req.session = null;
+    res.locals.currentUser = null;
 
     if (!token) {
       return next();
@@ -36,6 +37,8 @@ async function loadCurrentUser(req, res, next) {
     }
 
     req.currentUser = session.user;
+    // Views receive only what the navigation needs, never password fields.
+    res.locals.currentUser = { username: session.user.username, role: session.user.role };
 
     /*
       This object is also provided so other parts

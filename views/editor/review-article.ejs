@@ -10,7 +10,7 @@
 <body class="editor-page">
   <% const pending = article.status === 'pending'; const working = article.workingVersion || {}; const live = article.publishedVersion; const base = '/editor/articles/' + article._id; const revision = article.updatedAt.toISOString(); %>
   <% const history = article.publicationHistory || []; const hasChanges = live && ['title', 'summary', 'category', 'content', 'imageUrl'].some(field => (working[field] || '') !== (live[field] || '')); %>
-  <header class="masthead"><a class="brand" href="/">The Daily Web</a><a href="/editor">&larr; Article desk</a></header>
+  <%- include('../partials/editor-header', { navSection: 'articles' }) %>
   <main>
     <div class="page-heading">
       <p class="eyebrow">Newsroom / Article review</p>

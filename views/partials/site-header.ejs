@@ -1,0 +1,15 @@
+<% const user = locals.currentUser; %>
+<header class="site-header">
+  <div class="container header-content">
+    <a href="/" class="logo">The Daily Web</a>
+    <nav class="main-nav" aria-label="Main navigation">
+      <a href="/">Home</a>
+      <% if (user) { %>
+        <a href="<%= user.role === 'editor' ? '/editor' : '/reporter' %>">My workspace</a>
+        <form method="POST" action="/logout"><button type="submit" class="text-button">Sign out</button></form>
+      <% } else if (!locals.onLoginPage) { %>
+        <a href="/login">Reporter / Editor Login</a>
+      <% } %>
+    </nav>
+  </div>
+</header>

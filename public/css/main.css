@@ -55,6 +55,27 @@ a {
   text-decoration: underline;
 }
 
+.main-nav form {
+  margin: 0;
+}
+
+.text-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.text-button:hover {
+  text-decoration: underline;
+}
+
+.main-nav [aria-current="page"] {
+  font-weight: 700;
+}
+
 /* Hero */
 
 .hero {
