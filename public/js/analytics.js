@@ -88,7 +88,7 @@
     ctx.lineTo(plotRight, plotBottom);
     ctx.stroke();
 
-    // Axis titles, so the chart is legible without relying only on the legend.
+    // Axis titles
     ctx.save();
     ctx.fillStyle = COLORS.text;
     ctx.font = 'bold 12px system-ui, sans-serif';
@@ -190,8 +190,7 @@
       if (emptyState) emptyState.hidden = true;
       if (wrapper) wrapper.hidden = false;
       redrawChart = () => {
-        // Match drawing coordinates to the displayed width so mobile labels
-        // stay readable rather than shrinking a 960px bitmap to phone width.
+        // Match the canvas to its displayed width so labels stay readable on mobile.
         canvas.width = Math.max(250, Math.floor(canvas.clientWidth));
         canvas.height = 360;
         drawChart(canvas, data.timeline, data.publicationHistory || []);

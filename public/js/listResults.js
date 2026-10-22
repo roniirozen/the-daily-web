@@ -1,7 +1,5 @@
-// Search, filter and paging on newsroom lists without reloading the page.
-// The server renders the same results partial for the first page load and,
-// for a request marked with X-Requested-With, returns only that partial.
-// Without JavaScript the form and links still work as ordinary requests.
+// Search, filters and paging on newsroom lists without reloading the page.
+// For these requests the server returns only the results partial.
 (function () {
   const SEARCH_DEBOUNCE_MS = 350;
 

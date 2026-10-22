@@ -120,8 +120,7 @@ if (editorForm) {
     }
   });
 
-  // Closing, reloading or hiding the page saves at once instead of waiting
-  // for the typing pause, so the last words are not lost.
+  // Save at once when the page is closed or hidden, so no text is lost.
   function saveNow() {
     if (blocked || submitting || !dirty) return;
     clearTimeout(timer);

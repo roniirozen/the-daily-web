@@ -25,8 +25,7 @@
   const renderedIds = new Set();
   const knownCategories = new Set();
 
-  // Contract with Student 3: viewed article IDs are recorded client-side
-  // under this exact localStorage key as they read articles.
+  // The article page saves viewed article IDs under this key.
   function readViewedIds() {
     try {
       const raw = window.localStorage.getItem(VIEWED_STORAGE_KEY);

@@ -1,7 +1,6 @@
 (function () {
   const WEATHER_URL = '/api/weather';
-  // Matches the server-side cache lifetime, so the client never polls faster
-  // than fresh data could actually appear.
+  // Same as the server cache, so asking more often would not help.
   const REFRESH_MS = 5 * 60 * 1000;
   // Shown weather is hidden once it is older than this.
   const MAX_AGE_MS = 15 * 60 * 1000;
