@@ -54,8 +54,7 @@ function errorHandler(error, req, res, next) {
     status, method: req.method, route: req.route?.path || req.baseUrl || '/', error
   });
 
-  // A response already in flight cannot be replaced. Close it without passing
-  // raw error messages to Express's default console logger or writing twice.
+  // The response has already started, so it can only be closed.
   if (res.headersSent) return res.destroy();
 
   const messages = {
@@ -69,8 +68,7 @@ function errorHandler(error, req, res, next) {
   return respond(req, res, status, messages[status] || STATUS_CODES[status] || 'Request failed');
 }
 
-// Some existing controllers handle service failures themselves. Record their
-// 5xx responses too, without changing those controllers or logging any body.
+// Also log 5xx responses that controllers send themselves.
 function logServerResponses(req, res, next) {
   res.on('finish', () => {
     if (res.statusCode >= 500 && !res.locals.errorLogged) {

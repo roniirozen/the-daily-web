@@ -10,12 +10,10 @@ function errorDetails(error) {
       (typeof error.code === 'string' && /^[A-Z_0-9]{1,64}$/.test(error.code))) {
     details.code = error.code;
   }
-  // Error messages can contain submitted values, tokens or database URLs.
-  // Keep stack locations for debugging, without the message or nested causes.
+  // Error messages may contain user input or secrets, so only the stack lines are logged.
   if (process.env.NODE_ENV !== 'production' && typeof error.stack === 'string') {
     const heading = error.message ? `${error.name}: ${error.message}` : error.name;
-    // Remove the complete message first: user input may itself contain lines
-    // beginning with "at", which must never be mistaken for stack locations.
+    // Remove the whole message first, in case it contains lines starting with "at".
     const locations = error.stack.startsWith(heading) ? error.stack.slice(heading.length) : '';
     details.stack = locations.split('\n').filter(line => /^\s+at /.test(line));
   }
@@ -25,8 +23,7 @@ function errorDetails(error) {
 function write(level, message, context = {}) {
   const timestamp = new Date().toISOString();
   const data = {};
-  // Only explicitly supported operational metadata can reach the log file.
-  // Callers use fixed messages/reasons and route templates, never request data.
+  // Only these known fields are written to the log file.
   for (const field of contextFields) {
     const value = context[field];
     if (typeof value === 'string' || typeof value === 'number') {

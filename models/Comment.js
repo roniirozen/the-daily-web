@@ -27,8 +27,7 @@ const commentSchema = new mongoose.Schema(
       maxlength: CONTENT_MAX_LENGTH
     },
 
-    // Only a one-way hash is stored. The raw request identifiers used to
-    // produce it are never persisted.
+    // Only a hash of the guest's address is stored, never the address itself.
     deviceFingerprint: {
       type: String,
       required: true,

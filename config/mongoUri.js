@@ -1,5 +1,4 @@
-// The server, the demo seed and the demo verification all use this database
-// unless MONGO_URI names another one, so seeded data appears in the app.
+// Used by the server and the seed scripts, unless MONGO_URI is set.
 const DEFAULT_MONGO_URI = 'mongodb://127.0.0.1:27017/web-daily-demo';
 
 module.exports = {

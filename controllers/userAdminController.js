@@ -1,7 +1,7 @@
 const userAdmin = require('../services/userAdminService');
 const { respond } = require('../middleware/errorMiddleware');
 
-// Explicit view data prevents passwords and database credentials reaching EJS.
+// Pass only the fields the views need, never password hashes.
 function formValues(body = {}) {
   return {
     username: typeof body.username === 'string' ? body.username : '',

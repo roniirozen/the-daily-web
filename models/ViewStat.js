@@ -1,11 +1,6 @@
 const mongoose = require('mongoose');
 
-/*
-  One document per (article, hour) bucket instead of one document per view.
-  A front page read thousands of times an hour still produces a single
-  document that gets its viewCount incremented atomically, keeping the
-  collection size proportional to (articles x hours) rather than (views).
-*/
+// One document per article per hour, instead of one per view.
 const viewStatSchema = new mongoose.Schema(
   {
     article: {

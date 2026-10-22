@@ -40,8 +40,7 @@ function prepareRevisionSave(article, req, res) {
     respond(req, res, 409, 'This review is out of date. Reload the article and try again.');
     return false;
   }
-  // Mongoose includes this condition in save's update: only one competing
-  // action can succeed, even if both requests read the same revision.
+  // If two requests change the same revision, only the first one succeeds.
   article.$where = { status: article.status, updatedAt: article.updatedAt };
   return true;
 }
@@ -118,7 +117,7 @@ async function approveArticle(req, res, next) {
     if (message) return respond(req, res, 400, message);
     const approvedAt = new Date();
     const type = article.publishedVersion ? 'update' : 'initial';
-    // Copy primitive fields, never share the mutable working subdocument.
+    // Copy the fields, not the working subdocument itself.
     article.publishedVersion = Object.fromEntries(
       fields.map(field => [field, article.workingVersion[field]])
     );
@@ -149,8 +148,7 @@ async function returnArticle(req, res, next) {
   } catch (error) { return handleError(error, req, res, next); }
 }
 
-// The status is a field of the article resource; the requested new status
-// selects the editorial decision.
+// The requested status decides whether the article is approved or returned.
 exports.changeStatus = (req, res, next) => {
   if (req.body?.status === 'published') return approveArticle(req, res, next);
   if (req.body?.status === 'returned') return returnArticle(req, res, next);

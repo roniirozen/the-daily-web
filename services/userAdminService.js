@@ -8,9 +8,8 @@ const logger = require('../utils/logger');
 const publicFields = '_id username role createdAt updatedAt';
 let pendingAccountChange = Promise.resolve();
 
-// Account administration is infrequent. Serialize changes in this server so
-// two Editors cannot simultaneously demote/delete one another after both
-// observed the old role count. Recheck the actor after acquiring the queue.
+// Account changes run one at a time, so two Editors cannot remove each other
+// at the same moment. The acting Editor is checked again when its turn comes.
 function changeAccount(actorId, operation) {
   const result = pendingAccountChange.catch(() => {}).then(async () => {
     if (!await User.exists({ _id: actorId, role: 'editor' })) fail(403, 'Editor permission is required.');

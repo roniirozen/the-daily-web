@@ -4,12 +4,7 @@ const Article = require('../models/Article');
 
 const HOUR_MS = 60 * 60 * 1000;
 
-/*
-  Buckets are aligned to the start of the hour. Rounding every view down to
-  its hour means a busy article accumulates one upsert per hour instead of
-  one document per view, so the collection stays small no matter how many
-  reads happen.
-*/
+// Rounds a time down to the start of its hour.
 function bucketStartFor(date) {
   const time = date instanceof Date ? date.getTime() : new Date(date).getTime();
   if (!Number.isFinite(time)) {
@@ -26,11 +21,8 @@ function assertValidArticleId(articleId) {
   }
 }
 
-/*
-  Records a single view as an atomic increment/upsert on the (article, hour)
-  bucket. Safe under concurrent requests: MongoDB serializes the upsert per
-  unique key, so no read-modify-write race between simultaneous readers.
-*/
+// Adds one view to the article's current hour. The atomic upsert is safe
+// when many readers open the article at the same time.
 async function recordView(articleId, when = new Date()) {
   assertValidArticleId(articleId);
   const bucketStart = bucketStartFor(when);
@@ -41,20 +33,15 @@ async function recordView(articleId, when = new Date()) {
       { $inc: { viewCount: 1 } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     ),
-    // Kept as a best-effort denormalized counter for popularity sorting on
-    // the feed; the authoritative per-hour history is the ViewStat bucket.
-    // A view is not an edit, so it must not change the article's updatedAt
-    // revision that Editors and Reporters use to detect concurrent changes.
+    // Also update the article's total, used to sort the feed by popularity.
+    // A view is not an edit, so updatedAt (the article's revision) stays the same.
     Article.updateOne({ _id: articleId }, { $inc: { totalViews: 1 } }, { timestamps: false })
   ]);
 
   return bucket;
 }
 
-/*
-  Returns the view-count timeline for an article, ordered oldest to newest,
-  suitable for plotting directly. Optionally restrict to a date range.
-*/
+// Hourly view counts for an article, oldest first, optionally within a date range.
 async function getTimeline(articleId, { from, to } = {}) {
   assertValidArticleId(articleId);
 
@@ -68,10 +55,6 @@ async function getTimeline(articleId, { from, to } = {}) {
   return ViewStat.find(match).select('bucketStart viewCount -_id').sort({ bucketStart: 1 }).lean();
 }
 
-/*
-  Total views for an article, aggregated in MongoDB rather than summed in
-  JavaScript so it stays cheap regardless of how many buckets exist.
-*/
 async function getTotalViews(articleId) {
   assertValidArticleId(articleId);
 
@@ -83,10 +66,7 @@ async function getTotalViews(articleId) {
   return result ? result.total : 0;
 }
 
-/*
-  Total views for many articles at once (e.g. for popularity sorting on a
-  feed page), returned as a Map keyed by article id string.
-*/
+// Returns a Map from article id to total views.
 async function getTotalViewsForArticles(articleIds) {
   const ids = articleIds
     .filter(id => mongoose.isObjectIdOrHexString(id))
@@ -102,11 +82,8 @@ async function getTotalViewsForArticles(articleIds) {
   return new Map(results.map(row => [row._id.toString(), row.total]));
 }
 
-/*
-  CRUD surface for the ViewStat collection. Recording views should go
-  through recordView (atomic upsert); these are for direct administration
-  and for demonstrating Create/Read/Update/Delete during the defense.
-*/
+// Direct editing of view statistics from the analytics page.
+// Normal page views go through recordView.
 async function createViewStat({ article, bucketStart, viewCount = 0 }) {
   assertValidArticleId(article);
   validateCount(viewCount);
@@ -138,8 +115,7 @@ async function listViewStats({ article, limit = 100, skip = 0 } = {}) {
 async function updateViewStat(id, { viewCount }) {
   if (!mongoose.isObjectIdOrHexString(id)) return null;
   validateCount(viewCount);
-  // Returning the previous value makes the popularity adjustment a delta,
-  // so concurrent view increments are not overwritten by an absolute total.
+  // Adjust the article total by the difference, so views counted meanwhile are kept.
   const previous = await ViewStat.findByIdAndUpdate(id, { $set: { viewCount } }, { runValidators: true });
   if (!previous) return null;
   await Article.updateOne({ _id: previous.article }, { $inc: { totalViews: viewCount - previous.viewCount } }, { timestamps: false });

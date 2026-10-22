@@ -40,10 +40,6 @@ async function loadCurrentUser(req, res, next) {
     // Views receive only what the navigation needs, never password fields.
     res.locals.currentUser = { username: session.user.username, role: session.user.role };
 
-    /*
-      This object is also provided so other parts
-      of the project can easily access the logged-in user.
-    */
     req.session = {
       user: {
         id: session.user._id.toString(),

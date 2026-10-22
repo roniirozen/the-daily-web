@@ -1,11 +1,9 @@
-// Open-Meteo itself reports conditions in 15-minute steps, so the server
-// refreshes well within the 15-minute limit. If a refresh fails, the last
-// result may still be served while it is younger than 15 minutes.
+// The server refreshes the weather every 5 minutes. If a refresh fails, the
+// last result is still shown, but never once it is older than 15 minutes.
 const CACHE_MAX_AGE_MS = 5 * 60 * 1000;
 const STALE_LIMIT_MS = 15 * 60 * 1000; // Displayed data must never be older than this.
 
-// Non-secret location defaults (Tel Aviv). Override via environment
-// variables if the project needs a different city - no API key required.
+// Default location (Tel Aviv). Can be changed with environment variables.
 const LATITUDE = Number(process.env.WEATHER_LATITUDE) || 32.0853;
 const LONGITUDE = Number(process.env.WEATHER_LONGITUDE) || 34.7818;
 const LOCATION_NAME = process.env.WEATHER_LOCATION_NAME || 'Tel Aviv';
@@ -20,9 +18,7 @@ const WEATHER_CODES = {
   95: 'Thunderstorm', 96: 'Thunderstorm with hail', 99: 'Thunderstorm with heavy hail'
 };
 
-// Module-level cache shared by every request in this process. One external
-// fetch serves every concurrent user until it goes stale, instead of one
-// external call per page view.
+// One cache for all users, so Open-Meteo is called once per refresh, not per page view.
 let cache = null; // { fetchedAt: number, data: object }
 let inFlightRequest = null;
 let retryAfter = 0; // After a failed refresh, wait before calling Open-Meteo again.
@@ -63,11 +59,8 @@ async function fetchFromOpenMeteo() {
   };
 }
 
-/*
-  Returns cached weather when it is under 5 minutes old. Otherwise fetches
-  fresh data. Concurrent callers during a refresh share the same in-flight
-  request instead of each triggering their own call to Open-Meteo.
-*/
+// Returns the cached weather if it is under 5 minutes old, otherwise fetches it.
+// Requests that arrive during a fetch wait for that same fetch.
 async function getWeather() {
   if (isYoungerThan(cache, CACHE_MAX_AGE_MS)) {
     return cache.data;
@@ -97,8 +90,7 @@ async function getWeather() {
   try {
     return await inFlightRequest;
   } catch (error) {
-    // During an outage, recent data is still acceptable. Anything older than
-    // the limit must not be presented as current weather.
+    // During an outage, show the last data only while it is under 15 minutes old.
     if (isYoungerThan(cache, STALE_LIMIT_MS)) return cache.data;
     throw error;
   }
