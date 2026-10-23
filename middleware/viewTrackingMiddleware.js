@@ -2,15 +2,8 @@ const mongoose = require('mongoose');
 const viewStatsService = require('../services/viewStatsService');
 const logger = require('../utils/logger');
 
-/*
-  Records one view per public article page request into the existing hourly
-  ViewStat buckets (see services/viewStatsService.js) instead of a raw
-  per-request event collection. Recording happens after the response is sent
-  and never blocks or fails the page render - a dropped view never turns
-  into a broken article page.
-
-  Mounted on the public article route before the rendering controller.
-*/
+// Counts one view per article page, after the response is sent.
+// A failure here never breaks the page.
 function trackArticleView(req, res, next) {
   const articleId = req.params.id;
 

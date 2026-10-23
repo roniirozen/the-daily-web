@@ -396,8 +396,7 @@ async function seedDemoData() {
   console.log(`Connected to MongoDB database: ${mongoose.connection.name}`);
 
   try {
-    // Both explicit opt-in and an unmistakably disposable database name are
-    // required before removing any demo-owned records. Never seed production.
+    // Requires both --confirm and a demo database name. Never seed production.
     if (!/^(web-daily-demo(?:-[a-z0-9]+)?|daily_web_test_[a-f0-9]+)$/.test(mongoose.connection.name)) {
       throw new Error('Use a web-daily-demo database (or an isolated daily_web_test_ database).');
     }

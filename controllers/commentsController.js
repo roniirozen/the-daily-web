@@ -23,23 +23,17 @@ class CommentRateLimitError extends Error {
 }
 
 function createDeviceFingerprint(req) {
-  // Express does not trust forwarded addresses by default. Prefer the socket
-  // address so a guest cannot choose a new identity with a request header.
+  // Use the socket address: a request header could be faked to get a new identity.
   const ipAddress = req.socket?.remoteAddress || req.ip || 'unknown-address';
 
   return crypto
     .createHash('sha256')
-    // Changing a cookie, device ID, User-Agent or forwarded header cannot
-    // reset this limit. Devices sharing a public address share a quota.
+    // Based only on the address, so clearing cookies does not reset the limit.
     .update(`comments-v2\0${ipAddress}`)
     .digest('hex');
 }
 
-/**
- * Persistence operations are kept separate from the HTTP handlers so every
- * mutation has one implementation and the routes can add authorization and
- * request validation without duplicating database access.
- */
+// Database operations, used by the request handlers below.
 async function listCommentsForArticle(articleId) {
   return (await getCommentPage(articleId)).comments;
 }
@@ -90,8 +84,7 @@ async function createRateLimitedGuestComment({
     logger.warn('Guest comment limit reached', { route: '/api/articles/:articleId/comments', status: 429 });
     throw new CommentRateLimitError(retryAfter);
   }
-  // Reserving quota before insertion keeps concurrent requests bounded even
-  // across server restarts. A database failure may conservatively use a slot.
+  // Take a slot before saving, so parallel requests cannot pass the limit.
   return createCommentForArticle({ articleId, authorName, content, deviceFingerprint });
 }
 
@@ -165,8 +158,7 @@ function handleControllerError(error, res, next) {
 }
 
 exports.requireEditor = (req, res, next) => {
-  // loadCurrentUser runs before the already-mounted public router. Only that
-  // server-verified session identity is used for these API permissions.
+  // Permissions come only from the session user loaded by loadCurrentUser.
   if (!req.currentUser) {
     return res.status(401).json({ message: 'Authentication required.' });
   }

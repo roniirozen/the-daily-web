@@ -94,9 +94,7 @@ const articleSchema = new mongoose.Schema(
       default: Date.now
     },
 
-    // Denormalized counter kept in sync by services/viewStatsService.js so the
-    // public feed can sort by popularity without aggregating ViewStat on
-    // every request. Detailed per-hour history still lives in ViewStat.
+    // Updated with every view, so the feed can sort by popularity quickly.
     totalViews: {
       type: Number,
       default: 0,

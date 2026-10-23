@@ -13,8 +13,7 @@ exports.getArticle = async (req, res, next) => {
       return respond(req, res, 400, 'Invalid article ID');
     }
 
-    // Workflow status may be draft/pending/returned while an approved version
-    // remains public. Never expose workingVersion through this endpoint.
+    // A new version may be in progress; show only the published one.
     const article = await Article.findOne({
       _id: req.params.id,
       publishedVersion: { $exists: true, $ne: null }

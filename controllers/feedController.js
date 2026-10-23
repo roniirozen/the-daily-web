@@ -29,12 +29,7 @@ function parseViewedIds(raw) {
     .map(id => new mongoose.Types.ObjectId(id));
 }
 
-/*
-  Public feed endpoint. Only ever reads publishedVersion - workingVersion
-  (the reporter/editor draft) is never selected or returned here, matching
-  the same "publishedVersion exists" definition of "public" already used by
-  controllers/publicController.js for the single-article page.
-*/
+// Public feed: returns only publishedVersion, never the working draft.
 exports.getFeed = async (req, res, next) => {
   try {
     const query = req.method === 'POST' ? req.body : req.query;
@@ -98,9 +93,7 @@ exports.getFeed = async (req, res, next) => {
       ];
     }
 
-    // Query is executed entirely in MongoDB: filtering, sorting and paging
-    // all happen server-side via the indexes on publishedAt / totalViews /
-    // publishedVersion.category fields.
+    // Filtering, sorting and paging all run in MongoDB, using the indexes.
     const docs = await Article.find(filter)
       .select('publishedVersion.title publishedVersion.imageUrl publishedVersion.summary publishedVersion.category publishedAt totalViews reporter')
       .populate('reporter', 'username')

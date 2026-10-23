@@ -36,7 +36,6 @@
       JSON.stringify(viewedArticleIds)
     );
   } catch (error) {
-    // Storage may be disabled or full. Article rendering and comments must
-    // keep working in either case.
+    // Storage may be disabled or full; the page still works without it.
   }
 })();

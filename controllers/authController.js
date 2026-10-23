@@ -13,8 +13,8 @@ const {
   readCookie
 } = require('../utils/sessionToken');
 
-// Fixed dummy values are not an account. They make unknown usernames perform
-// the same scrypt derivation as an incorrect password for an existing user.
+// An unknown username is checked against this dummy hash, so it takes as long
+// as a wrong password and does not reveal which usernames exist.
 const DUMMY_PASSWORD_SALT = '00000000000000000000000000000000';
 const DUMMY_PASSWORD_HASH = '0'.repeat(128);
 

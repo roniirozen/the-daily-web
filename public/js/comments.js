@@ -82,8 +82,7 @@ if (commentForm) {
     });
   }
 
-  // Editor-only controls. Hiding them from other users is only presentation:
-  // the API rejects edits and deletions from anyone who is not an Editor.
+  // Shown only to Editors. The API checks the role as well.
   function addModerationControls(element) {
     if (!canModerate || element.querySelector('.comment-actions')) return;
     const actions = document.createElement('div');
